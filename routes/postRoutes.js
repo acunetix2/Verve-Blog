@@ -43,4 +43,11 @@ router.get("/:slug", async (req, res) => {
   }
 });
 
+router.get("/:tag", async (req, res) => {
+  const posts = await Post.find({ tags: req.params.tag });
+  res.json(posts);
+});
+
+
+
 export default router;

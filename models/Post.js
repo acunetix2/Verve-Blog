@@ -8,7 +8,7 @@ const postSchema = new mongoose.Schema(
     content: { type: String, required: true },
     author: { type: String, required: true },
     date: { type: Date, default: Date.now },
-    readTime: { type: String, default: "unspecified" },
+    readTime: { type: String, default: "3 min read" },
     tags: { type: [String], default: [] },
     featured: { type: Boolean, default: false },
     slug: { type: String, unique: true },
