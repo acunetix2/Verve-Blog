@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import cors from "cors";
 import dotenv from "dotenv";
 import postRoutes from "./routes/postRoutes.js";
-import authRoutes from "./routes/authRoutes.js"; // ✅ Added for admin auth
+import authRoutes from "./routes/authRoutes.js"; 
 
 dotenv.config();
 
@@ -40,7 +40,7 @@ mongoose
 
 // ✅ API routes
 app.use("/api/posts", postRoutes);
-app.use("/api/auth", authRoutes); // 🔐 Authentication routes added
+app.use("/api/auth", authRoutes); 
 
 // ✅ Health check route
 app.get("/", (req, res) => {

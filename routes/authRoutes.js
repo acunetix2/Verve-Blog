@@ -1,16 +1,13 @@
 import express from "express";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import User from "../models/User.js";
 
 dotenv.config();
 const router = express.Router();
 
-/**
- * 🧩 REGISTER
- * Creates a new user with hashed password.
- */
+ // Creates a new user with hashed password.
+
 router.post("/signup", async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -21,18 +18,15 @@ router.post("/signup", async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
     }
 
-    // Hash password before saving
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
+    // Let Mongoose handle password hashing (pre-save hook)
     const user = await User.create({
       email,
-      password: hashedPassword,
+      password,
       role,
     });
 
     res.status(201).json({
-      message: "✅ User created successfully",
+      message: "User created successfully",
       user: {
         id: user._id,
         email: user.email,
@@ -45,10 +39,8 @@ router.post("/signup", async (req, res) => {
   }
 });
 
-/**
- * 🔐 LOGIN
- * Authenticates user by email and password, returns JWT.
- */
+ // Authenticates user by email and password, returns JWT.
+
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
@@ -59,13 +51,13 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Compare password
-    const isMatch = await bcrypt.compare(password, user.password);
+    // Compare password using model method
+    const isMatch = await user.matchPassword(password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Sign token
+    // Sign JWT token
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -73,7 +65,7 @@ router.post("/login", async (req, res) => {
     );
 
     res.json({
-      message: "✅ Login successful",
+      message: "Login successful",
       token,
       user: {
         id: user._id,
@@ -87,10 +79,8 @@ router.post("/login", async (req, res) => {
   }
 });
 
-/**
- * 🧾 VERIFY TOKEN
- * Checks if a JWT is valid.
- */
+ // Checks if a JWT is valid.
+
 router.get("/verify", (req, res) => {
   try {
     const authHeader = req.headers.authorization;

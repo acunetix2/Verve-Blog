@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true }, // ✅ Changed from username → email
   password: { type: String, required: true },
-  role: { type: String, default: "user" }, // "admin" or "user"
+  role: { type: String, default: "admin" }, // "admin" or "user"
 });
 
 // 🔒 Hash password before saving
