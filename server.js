@@ -4,6 +4,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import postRoutes from "./routes/postRoutes.js";
 import authRoutes from "./routes/authRoutes.js"; 
+import documentsRoutes from "./routes/documentsRoutes.js";
+import usersRoutes from "./routes/usersRoutes.js";
 
 dotenv.config();
 
@@ -41,6 +43,8 @@ mongoose
 // ✅ API routes
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", authRoutes); 
+app.use("/api/users", usersRoutes);
+app.use("/api/documents", documentsRoutes);
 
 // ✅ Health check route
 app.get("/", (req, res) => {

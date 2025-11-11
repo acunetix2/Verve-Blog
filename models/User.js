@@ -21,3 +21,4 @@ userSchema.methods.matchPassword = async function (enteredPassword) {
 };
 
 export default mongoose.model("User", userSchema);
+
