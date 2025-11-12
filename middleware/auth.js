@@ -1,27 +1,51 @@
 import jwt from "jsonwebtoken";
 
+/**
+ * Middleware to authenticate users using JWT
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 export const authMiddleware = (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader)
-    return res
-      .status(401)
-      .json({ success: false, message: "No token provided" });
-
-  const token = authHeader.split(" ")[1];
   try {
+    const authHeader = req.headers.authorization;
+
+    if (!authHeader) {
+      return res.status(401).json({ success: false, message: "No token provided" });
+    }
+
+    // Expecting format: "Bearer <token>"
+    const tokenParts = authHeader.split(" ");
+    if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
+      return res.status(401).json({ success: false, message: "Malformed token" });
+    }
+
+    const token = tokenParts[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    // Attach decoded token to request
     req.user = decoded; // { id, role }
     next();
   } catch (err) {
-    return res.status(401).json({ success: false, message: "Invalid token" });
+    console.error("Auth Middleware Error:", err);
+    return res.status(401).json({ success: false, message: "Invalid or expired token" });
   }
 };
 
-// Admin-only middleware
+/**
+ * Middleware to restrict access to admin users only
+ * @param {import('express').Request} req
+ * @param {import('express').Response} res
+ * @param {import('express').NextFunction} next
+ */
 export const adminMiddleware = (req, res, next) => {
-  if (req.user.role !== "admin")
-    return res
-      .status(403)
-      .json({ success: false, message: "Forbidden" });
-  next();
+  try {
+    if (!req.user || req.user.role !== "admin") {
+      return res.status(403).json({ success: false, message: "Forbidden: Admins only" });
+    }
+    next();
+  } catch (err) {
+    console.error("Admin Middleware Error:", err);
+    return res.status(500).json({ success: false, message: "Server error" });
+  }
 };
