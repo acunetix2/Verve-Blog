@@ -9,11 +9,11 @@ dotenv.config();
 
 const router = express.Router();
 
-// 🔹 Configure multer to use memory storage
+// ?? Configure multer to use memory storage
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// 🔹 Initialize S3 client for Backblaze B2
+// ?? Initialize S3 client for Backblaze B2
 const s3Client = new S3Client({
   region: "us-east-005",
   endpoint: "https://s3.us-east-005.backblazeb2.com",
@@ -24,7 +24,7 @@ const s3Client = new S3Client({
   forcePathStyle: true,
 });
 
-// 🔹 Helper: upload file to B2
+// ?? Helper: upload file to B2
 const uploadToB2 = async (file) => {
   const uniqueFileName = `${Date.now()}-${file.originalname}`;
   try {

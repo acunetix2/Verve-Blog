@@ -4,7 +4,7 @@ import { authMiddleware } from "../middleware/auth.js"; // middleware that sets 
 
 const router = express.Router();
 
-// 🟢 Get all posts
+// ?? Get all posts
 router.get("/", async (req, res) => {
   try {
     const posts = await Post.find().sort({ createdAt: -1 });
@@ -14,7 +14,7 @@ router.get("/", async (req, res) => {
   }
 });
 
-// 🟢 Create new post
+// ?? Create new post
 router.post("/create", async (req, res) => {
   try {
     const { title, content, author, slug, tags } = req.body;
@@ -43,7 +43,7 @@ router.post("/create", async (req, res) => {
   }
 });
 
-// 🟢 Get post by slug
+// ?? Get post by slug
 router.get("/:slug", async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -54,7 +54,7 @@ router.get("/:slug", async (req, res) => {
   }
 });
 
-// 🔵 Get likes count for a post
+// ?? Get likes count for a post
 router.get("/:slug/likes", async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -69,7 +69,7 @@ router.get("/:slug/likes", async (req, res) => {
   }
 });
 
-// 🔵 Like a post (restricted)
+// ?? Like a post (restricted)
 router.post("/:slug/like", authMiddleware, async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -91,7 +91,7 @@ router.post("/:slug/like", authMiddleware, async (req, res) => {
   }
 });
 
-// 🔵 Unlike a post (restricted)
+// ?? Unlike a post (restricted)
 router.post("/:slug/unlike", authMiddleware, async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -112,7 +112,7 @@ router.post("/:slug/unlike", authMiddleware, async (req, res) => {
   }
 });
 
-// 🟢 Get views count
+// ?? Get views count
 router.get("/:slug/views", async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -127,7 +127,7 @@ router.get("/:slug/views", async (req, res) => {
   }
 });
 
-// 🔵 Increment views (restricted)
+// ?? Increment views (restricted)
 router.post("/:slug/view", authMiddleware, async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -148,7 +148,7 @@ router.post("/:slug/view", authMiddleware, async (req, res) => {
   }
 });
 
-// 🔵 Get comments
+// ?? Get comments
 router.get("/:slug/comments", async (req, res) => {
   try {
     const post = await Post.findOne({ slug: req.params.slug });
@@ -159,7 +159,7 @@ router.get("/:slug/comments", async (req, res) => {
   }
 });
 
-// 🔵 Add comment (name + text)
+// ?? Add comment (name + text)
 router.post("/:slug/comments-name", async (req, res) => {
   try {
     const { name, text } = req.body;
@@ -178,7 +178,7 @@ router.post("/:slug/comments-name", async (req, res) => {
   }
 });
 
-// 🟢 Delete post
+// ?? Delete post
 router.delete("/:id", async (req, res) => {
   try {
     const deletedPost = await Post.findByIdAndDelete(req.params.id);
@@ -189,7 +189,7 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// 🟢 Update post
+// ?? Update post
 router.put("/:id", async (req, res) => {
   try {
     const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
