@@ -107,7 +107,7 @@ router.get(
 
       // ?? Send to frontend with token + role
       res.redirect(
-        `http://localhost:8080/login?token=${token}&role=${req.user.role}`
+        `${process.env.FRONTEND_URL}/login?token=${token}&role=${req.user.role}`
       );
     } catch (err) {
       console.error("Error generating token:", err);
