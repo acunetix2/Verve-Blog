@@ -16,6 +16,7 @@ router.get("/", async (req, res) => {
 
 // ?? Create new post
 router.post("/create", async (req, res) => {
+const io = req.app.get("io");
   try {
     const { title, content, author, slug, tags } = req.body;
 
@@ -37,6 +38,7 @@ router.post("/create", async (req, res) => {
       viewedBy: [],
     });
     await newPost.save();
+	io.emit("new-post", newPost);
     res.status(201).json(newPost);
   } catch (err) {
     res.status(500).json({ error: err.message });

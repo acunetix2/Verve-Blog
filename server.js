@@ -1,8 +1,10 @@
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
+import http from "http";
 import dotenv from "dotenv";
 import passport from "passport";
+import { Server } from "socket.io";
 import session from "express-session";
 import "./config/passport.js"; 
 import postRoutes from "./routes/postRoutes.js";
@@ -12,6 +14,7 @@ import usersRoutes from "./routes/usersRoutes.js";
 
 dotenv.config();
 const app = express();
+const server = http.createServer(app);
 
 // Middleware
 app.use(express.json());
@@ -45,6 +48,20 @@ app.use(
   })
 );
 
+const io = new Server(server, {
+  cors: {
+    origin: [
+      "http://localhost:8080",
+      "http://127.0.0.1:8080",
+      "http://localhost:5173",
+      "http://127.0.0.1:5173",
+    ], 
+    methods: ["GET", "POST"],
+  },
+});
+
+// Make io accessible in routes
+app.set("io", io);
 //  MongoDB connection
 mongoose
   .connect(process.env.MONGO_URI, {

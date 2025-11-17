@@ -47,6 +47,7 @@ const uploadToB2 = async (file) => {
  * @desc Upload a new document to B2
  */
 router.post("/", upload.single("file"), async (req, res) => {
+  const io = req.app.get("io");
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
@@ -63,6 +64,7 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     await newDocument.save();
 
+	io.emit("new-document", newDocument);
     res.status(201).json({
       message: "Document uploaded successfully",
       id: newDocument._id,
