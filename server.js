@@ -64,7 +64,6 @@ const io = new Server(server, {
   },
 });
 
-app.options("*", cors());
 // Make io accessible in routes
 app.set("io", io);
 //  MongoDB connection
