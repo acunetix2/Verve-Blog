@@ -41,7 +41,8 @@ app.use(
       "http://127.0.0.1:8080",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-	  "https://vervehub.up.railway.app",
+	  "https://vervehub.onrender.com",
+	  "https://vervehub.netlify.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -56,12 +57,14 @@ const io = new Server(server, {
       "http://127.0.0.1:8080",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-	  "https://vervehub.up.railway.app",
+	  "https://vervehub.onrender.com",
+	  "https://vervehub.netlify.app",
     ], 
     methods: ["GET", "POST"],
   },
 });
 
+app.options("*", cors());
 // Make io accessible in routes
 app.set("io", io);
 //  MongoDB connection
