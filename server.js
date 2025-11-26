@@ -25,7 +25,7 @@ app.use(
     secret: process.env.SESSION_SECRET || "verveblogsecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }, // set secure:true only in production (https)
+    cookie: { secure: true }, // set secure:true only in production (https)
   })
 );
 
