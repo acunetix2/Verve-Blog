@@ -8,11 +8,6 @@ import cookieParser from "cookie-parser";
 dotenv.config();
 const router = express.Router();
 
-// Enable cookie parsing
-router.use(cookieParser());
-
-// Initialize passport (VERY IMPORTANT)
-router.use(passport.initialize());
 
 /* ---------------------------------------------------
    REGULAR SIGNUP
