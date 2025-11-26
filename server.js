@@ -25,10 +25,13 @@ app.use(
     secret: process.env.SESSION_SECRET || "verveblogsecret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: true }, // set secure:true only in production (https)
+    cookie: {
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "none",
+    },
   })
 );
-
+app.set("trust proxy", 1);
 // Initialize Passport
 app.use(passport.initialize());
 app.use(passport.session());
