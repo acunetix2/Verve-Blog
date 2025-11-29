@@ -1,9 +1,11 @@
 import express from "express";
 import multer from "multer";
 import Document from "../models/documents.js";
+import Notification from "../models/Notification.js"; // ✅ import notification model
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
+import User from "../models/Users.js"; // ✅ import user model
 
 dotenv.config();
 
@@ -64,7 +66,19 @@ router.post("/", upload.single("file"), async (req, res) => {
 
     await newDocument.save();
 
-	io.emit("new-document", newDocument);
+    // ✅ Emit notification to all connected clients
+    io.emit("new-document", newDocument);
+
+    // ✅ Save notification for all users
+    const users = await User.find(); // fetch all users
+    const notifications = users.map(user => ({
+      userId: user._id,
+      type: "document",
+      title: "New Resource Uploaded",
+      message: newDocument.title,
+    }));
+    await Notification.insertMany(notifications);
+
     res.status(201).json({
       message: "Document uploaded successfully",
       id: newDocument._id,

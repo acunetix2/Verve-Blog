@@ -1,5 +1,6 @@
 import express from "express";
 import Post from "../models/Post.js";
+import Notification from "../models/Notification.js"; // ✅ import notification model
 import { authMiddleware } from "../middleware/auth.js"; // middleware that sets req.user
 
 const router = express.Router();
@@ -16,7 +17,7 @@ router.get("/", async (req, res) => {
 
 // ?? Create new post
 router.post("/create", async (req, res) => {
-const io = req.app.get("io");
+  const io = req.app.get("io");
   try {
     const { title, content, author, slug, tags } = req.body;
 
@@ -38,7 +39,20 @@ const io = req.app.get("io");
       viewedBy: [],
     });
     await newPost.save();
-	io.emit("new-post", newPost);
+
+    // Emit notification to all connected clients
+    io.emit("new-post", newPost);
+
+    // ✅ Save notification for all users
+    const users = await User.find(); // fetch all users
+    const notifications = users.map(user => ({
+      userId: user._id,
+      type: "post",
+      title: "New Blog Post",
+      message: newPost.title,
+    }));
+    await Notification.insertMany(notifications);
+
     res.status(201).json(newPost);
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -11,6 +11,7 @@ import postRoutes from "./routes/postRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import documentsRoutes from "./routes/documentsRoutes.js";
 import usersRoutes from "./routes/usersRoutes.js";
+import notificationRoutes from "./routes/notifications.js";
 
 dotenv.config();
 const app = express();
@@ -83,9 +84,10 @@ mongoose
 
 //  API routes
 app.use("/api/posts", postRoutes);
-app.use("/api/auth", authRoutes); // includes Google OAuth now
+app.use("/api/auth", authRoutes); 
 app.use("/api/users", usersRoutes);
 app.use("/api/documents", documentsRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 //  Health check route
 app.get("/", (req, res) => {
