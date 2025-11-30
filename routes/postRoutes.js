@@ -43,7 +43,7 @@ router.post("/create", async (req, res) => {
     // Emit notification to all connected clients
     io.emit("new-post", newPost);
 
-    // ✅ Save notification for all users
+    // Save notification for all users
     const users = await User.find(); // fetch all users
     const notifications = users.map(user => ({
       userId: user._id,
