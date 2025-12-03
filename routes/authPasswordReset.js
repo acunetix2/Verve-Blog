@@ -8,7 +8,14 @@ import sgMail from "@sendgrid/mail";
 const router = express.Router();
 
 // Set SendGrid API key
+if (!process.env.SENDGRID_API_KEY) {
+  console.error("SENDGRID_API_KEY is not set!");
+  process.exit(1); // Prevent app from starting
+}
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// Fallback sender email
+const MAIL_FROM = process.env.MAIL_FROM || "vervehubwriteups@gmail.com";
 
 /* ---------------------------------------------------
    FORGOT PASSWORD
@@ -19,8 +26,10 @@ router.post("/forgot-password", async (req, res) => {
     if (!email) return res.status(400).json({ message: "Email is required" });
 
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
+      // Security: don't reveal if email exists
       return res.json({ message: "If that email exists, a reset link was sent" });
+    }
 
     // Generate reset token
     const rawToken = crypto.randomBytes(32).toString("hex");
@@ -38,17 +47,22 @@ router.post("/forgot-password", async (req, res) => {
     const msg = {
       to: email,
       from: {
-        email: process.env.MAIL_FROM, 
+        email: MAIL_FROM,
         name: "Verve Hub",
       },
       subject: "Verve Hub Password Reset",
       html: passwordResetEmail(resetUrl),
-      replyTo: process.env.MAIL_FROM,
+      replyTo: MAIL_FROM,
     };
 
-    await sgMail.send(msg);
-
-    res.json({ message: "Password reset link sent to email" });
+    try {
+      await sgMail.send(msg);
+      console.log(`Password reset email sent to ${email}`);
+      res.json({ message: "Password reset link sent to email" });
+    } catch (emailError) {
+      console.error("SendGrid email error:", emailError);
+      res.status(500).json({ message: "Failed to send email" });
+    }
   } catch (error) {
     console.error("Forgot password error:", error);
     res.status(500).json({ message: "Server error" });
@@ -81,7 +95,8 @@ router.post("/reset-password", async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-    user.password = newPassword; // Ensure your User model hashes passwords
+    // Hashing should happen in User model pre-save hook
+    user.password = newPassword;
     await user.save();
 
     await PasswordResetToken.deleteMany({ userId: user._id });
