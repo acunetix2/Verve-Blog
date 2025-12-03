@@ -1,17 +1,5 @@
-import fs from "fs";
-import path from "path";
-const logoPath = path.join(process.cwd(), "utils", "logo.png"); // adjust if logo is elsewhere
-const logoBase64 = fs.readFileSync(logoPath, { encoding: "base64" });
-const logoDataUri = `data:image/png;base64,${logoBase64}`;
-
-// Email template
 export const passwordResetEmail = (resetUrl) => `
   <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <!-- Logo -->
-    <div style="text-align: center; margin-bottom: 20px;">
-      <img src="${logoDataUri}" alt="Verve Hub Logo" style="width: 120px; height: auto;" />
-    </div>
-
     <h2 style="color: #f97316;">Verve Hub Password Reset</h2>
     <p>You requested a password reset for your Verve Hub account.</p>
     <p>Click the button below to set a new password:</p>
