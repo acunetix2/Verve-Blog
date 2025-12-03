@@ -1,11 +1,14 @@
 import express from "express";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
 import User from "../models/User.js";
 import PasswordResetToken from "../models/PasswordResetToken.js";
 import { passwordResetEmail } from "../utils/emailTemplates.js";
+import sgMail from "@sendgrid/mail";
 
 const router = express.Router();
+
+// Set SendGrid API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 /* ---------------------------------------------------
    FORGOT PASSWORD
@@ -31,26 +34,19 @@ router.post("/forgot-password", async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}&email=${email}`;
 
-    // Create transporter using App Password with explicit host and port
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,          // TLS port
-      secure: false,      // false for TLS (STARTTLS)
-      auth: {
-        user: process.env.MAIL_USER, // Your Gmail
-        pass: process.env.MAIL_PASS, // App Password
-      },
-      tls: {
-        rejectUnauthorized: false,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `Verve Hub <${process.env.MAIL_USER}>`,
+    // Send email using SendGrid
+    const msg = {
       to: email,
+      from: {
+        email: process.env.MAIL_FROM, 
+        name: "Verve Hub",
+      },
       subject: "Verve Hub Password Reset",
       html: passwordResetEmail(resetUrl),
-    });
+      replyTo: process.env.MAIL_FROM,
+    };
+
+    await sgMail.send(msg);
 
     res.json({ message: "Password reset link sent to email" });
   } catch (error) {
@@ -85,7 +81,7 @@ router.post("/reset-password", async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired token" });
     }
 
-    user.password = newPassword; // Make sure your User model hashes passwords in a pre-save hook
+    user.password = newPassword; // Ensure your User model hashes passwords
     await user.save();
 
     await PasswordResetToken.deleteMany({ userId: user._id });
