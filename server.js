@@ -13,6 +13,7 @@ import documentsRoutes from "./routes/documentsRoutes.js";
 import usersRoutes from "./routes/usersRoutes.js";
 import notificationRoutes from "./routes/notifications.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import passwordResetRoutes from "./routes/authPasswordReset.js";
 
 dotenv.config();
 const app = express();
@@ -86,6 +87,7 @@ mongoose
 //  API routes
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", authRoutes); 
+app.use("/api/auth", passwordResetRoutes);
 app.use("/api/users", usersRoutes);
 app.use("/api/documents", documentsRoutes);
 app.use("/api/notifications", notificationRoutes);
