@@ -25,6 +25,7 @@ const postSchema = new mongoose.Schema(
 
     likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     viewedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+	embedding: { type: [Number], index: "vector", default: [] },
   },
   { timestamps: true }
 );
