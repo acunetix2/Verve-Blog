@@ -1,5 +1,6 @@
 import express from "express";
 import Post from "../models/Post.js";
+import User from "../models/User.js";
 import Notification from "../models/Notification.js"; // ✅ import notification model
 import { authMiddleware } from "../middleware/auth.js"; // middleware that sets req.user
 
@@ -18,8 +19,9 @@ router.get("/", async (req, res) => {
 // ?? Create new post
 router.post("/create", async (req, res) => {
   const io = req.app.get("io");
+
   try {
-    const { title, content, author, slug, tags } = req.body;
+    const { title, content, author, slug, tags, category } = req.body; // ✅ added category
 
     const existingPost = await Post.findOne({ slug });
     if (existingPost) {
@@ -32,32 +34,37 @@ router.post("/create", async (req, res) => {
       author,
       slug,
       tags,
+      category: category || "Uncategorized", // ✅ set default if not provided
       likes: 0,
       views: 0,
       comments: [],
       likedBy: [],
       viewedBy: [],
     });
+
     await newPost.save();
 
-    // Emit notification to all connected clients
     io.emit("new-post", newPost);
 
-    // Save notification for all users
-    const users = await User.find(); // fetch all users
-    const notifications = users.map(user => ({
+    // Notify all users
+    const users = await User.find();
+    const notifications = users.map((user) => ({
       userId: user._id,
       type: "post",
       title: "New Blog Post",
       message: newPost.title,
     }));
+
     await Notification.insertMany(notifications);
 
     res.status(201).json(newPost);
   } catch (err) {
+    console.error("CREATE POST ERROR:", err);
     res.status(500).json({ error: err.message });
   }
 });
+
+// ?? Get posts count for this month
 router.get("/count-this-month", async (req, res) => {
   try {
     const startOfMonth = new Date();
@@ -137,7 +144,7 @@ router.post("/:slug/unlike", authMiddleware, async (req, res) => {
       return res.status(400).json({ message: "You have not liked this post yet", likes: post.likes });
     }
 
-    post.likedBy = post.likedBy.filter(id => id.toString() !== userId);
+    post.likedBy = post.likedBy.filter((id) => id.toString() !== userId);
     post.likes = post.likedBy.length;
     await post.save();
 
@@ -227,11 +234,17 @@ router.delete("/:id", async (req, res) => {
 // ?? Update post
 router.put("/:id", async (req, res) => {
   try {
-    const updatedPost = await Post.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updatedData = {
+      ...req.body,
+      category: req.body.category || "Uncategorized", // ✅ retain category
+    };
+
+    const updatedPost = await Post.findByIdAndUpdate(req.params.id, updatedData, { new: true });
     if (!updatedPost) return res.status(404).json({ message: "Post not found" });
     res.json({ message: "Post updated successfully", updatedPost });
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
+
 export default router;

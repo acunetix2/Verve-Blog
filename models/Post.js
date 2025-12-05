@@ -13,6 +13,9 @@ const postSchema = new mongoose.Schema(
     featured: { type: Boolean, default: false },
     slug: { type: String, unique: true },
 
+    // ✅ New field
+    category: { type: String, default: "Uncategorized" },
+
     likes: { type: Number, default: 0 },
     views: { type: Number, default: 0 },
     comments: [
@@ -25,7 +28,7 @@ const postSchema = new mongoose.Schema(
 
     likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     viewedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-	embedding: { type: [Number], index: "vector", default: [] },
+    embedding: { type: [Number], index: "vector", default: [] },
   },
   { timestamps: true }
 );

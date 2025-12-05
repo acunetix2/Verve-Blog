@@ -53,7 +53,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const { title, description } = req.body;
+    const { title, description, category } = req.body; // ✅ added category from frontend
     const uploadedFile = await uploadToB2(req.file);
 
     const newDocument = new Document({
@@ -62,6 +62,7 @@ router.post("/", upload.single("file"), async (req, res) => {
       fileName: uploadedFile.fileName,
       fileType: req.file.mimetype,
       b2FileId: uploadedFile.fileName, // store filename for private download
+      category: category || "Uncategorized", // ✅ safely set category with default
     });
 
     await newDocument.save();

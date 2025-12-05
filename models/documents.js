@@ -5,7 +5,8 @@ const documentSchema = new mongoose.Schema({
   description: String,
   fileName: { type: String, required: true },
   fileType: { type: String, required: true },
-  b2FileId: { type: String, required: true }, // store B2 fileId for private access
+  b2FileId: { type: String, required: true }, 
+  category: { type: String, default: "Uncategorized" }, 
   uploadedAt: { type: Date, default: Date.now },
 });
 
