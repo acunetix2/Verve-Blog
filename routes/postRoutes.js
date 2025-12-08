@@ -16,12 +16,11 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ?? Create new post
 router.post("/create", async (req, res) => {
   const io = req.app.get("io");
 
   try {
-    const { title, content, author, slug, tags, category } = req.body; // ✅ added category
+    const { title, content, author, slug, tags, category } = req.body; 
 
     const existingPost = await Post.findOne({ slug });
     if (existingPost) {
@@ -34,7 +33,7 @@ router.post("/create", async (req, res) => {
       author,
       slug,
       tags,
-      category: category || "Uncategorized", // ✅ set default if not provided
+      category: category || "Uncategorized",
       likes: 0,
       views: 0,
       comments: [],
@@ -44,18 +43,15 @@ router.post("/create", async (req, res) => {
 
     await newPost.save();
 
+    // Emit event
     io.emit("new-post", newPost);
 
-    // Notify all users
-    const users = await User.find();
-    const notifications = users.map((user) => ({
-      userId: user._id,
+    // ✅ FIXED — ONE global notification only
+    await Notification.create({
       type: "post",
       title: "New Blog Post",
       message: newPost.title,
-    }));
-
-    await Notification.insertMany(notifications);
+    });
 
     res.status(201).json(newPost);
   } catch (err) {
@@ -63,7 +59,6 @@ router.post("/create", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-
 // ?? Get posts count for this month
 router.get("/count-this-month", async (req, res) => {
   try {

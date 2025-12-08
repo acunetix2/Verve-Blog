@@ -1,11 +1,11 @@
 import express from "express";
 import multer from "multer";
 import Document from "../models/documents.js";
-import Notification from "../models/Notification.js"; // ✅ import notification model
+import Notification from "../models/Notification.js"; 
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
-import User from "../models/Users.js"; // ✅ import user model
+import User from "../models/Users.js"; 
 
 dotenv.config();
 
@@ -53,7 +53,7 @@ router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const { title, description, category } = req.body; // ✅ added category from frontend
+    const { title, description, category } = req.body;
     const uploadedFile = await uploadToB2(req.file);
 
     const newDocument = new Document({
@@ -61,24 +61,21 @@ router.post("/", upload.single("file"), async (req, res) => {
       description,
       fileName: uploadedFile.fileName,
       fileType: req.file.mimetype,
-      b2FileId: uploadedFile.fileName, // store filename for private download
-      category: category || "Uncategorized", // ✅ safely set category with default
+      b2FileId: uploadedFile.fileName,
+      category: category || "Uncategorized",
     });
 
     await newDocument.save();
 
-    // ✅ Emit notification to all connected clients
+    // Emit event
     io.emit("new-document", newDocument);
 
-    // ✅ Save notification for all users
-    const users = await User.find(); // fetch all users
-    const notifications = users.map(user => ({
-      userId: user._id,
+    // ✅ FIXED — Save ONLY ONE global notification
+    await Notification.create({
       type: "document",
       title: "New Resource Uploaded",
       message: newDocument.title,
-    }));
-    await Notification.insertMany(notifications);
+    });
 
     res.status(201).json({
       message: "Document uploaded successfully",

@@ -9,11 +9,11 @@ const router = express.Router();
 ----------------------------------------------------- */
 router.get("/", authMiddleware, async (req, res) => {
   try {
-    const list = await Notification.find().sort({ createdAt: -1 }); // newest first
-    res.json(list);
-  } catch (err) {
-    console.error("GET /notifications error:", err);
-    res.status(500).json({ error: "Failed to load notifications" });
+    const list = await Notification.find().sort({ createdAt: -1 });
+    return res.status(200).json(list);
+  } catch (error) {
+    console.error("GET /notifications error:", error);
+    return res.status(500).json({ error: "Failed to load notifications" });
   }
 });
 
@@ -24,20 +24,24 @@ router.post("/", authMiddleware, async (req, res) => {
   try {
     const { type, title, message } = req.body;
 
+    // Validate input
     if (!type || !title || !message) {
-      return res.status(400).json({ error: "Missing fields" });
+      return res.status(400).json({
+        error: "Missing fields: type, title, and message are required",
+      });
     }
 
-    const notif = await Notification.create({
+    const newNotif = new Notification({
       type,
       title,
       message,
     });
 
-    res.json(notif);
-  } catch (err) {
-    console.error("POST /notifications error:", err);
-    res.status(500).json({ error: "Failed to create notification" });
+    const saved = await newNotif.save();
+    return res.status(201).json(saved);
+  } catch (error) {
+    console.error("POST /notifications error:", error);
+    return res.status(500).json({ error: "Failed to create notification" });
   }
 });
 
@@ -46,16 +50,23 @@ router.post("/", authMiddleware, async (req, res) => {
 ----------------------------------------------------- */
 router.delete("/:id", authMiddleware, async (req, res) => {
   try {
-    const deleted = await Notification.findByIdAndDelete(req.params.id);
+    const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid notification ID format" });
+    }
+
+    const deleted = await Notification.findByIdAndDelete(id);
 
     if (!deleted) {
       return res.status(404).json({ error: "Notification not found" });
     }
 
-    res.json({ success: true });
-  } catch (err) {
-    console.error("DELETE /notifications/:id error:", err);
-    res.status(500).json({ error: "Failed to delete notification" });
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    console.error("DELETE /notifications/:id error:", error);
+    return res.status(500).json({ error: "Failed to delete notification" });
   }
 });
 
