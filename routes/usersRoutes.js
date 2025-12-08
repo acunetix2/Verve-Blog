@@ -78,6 +78,11 @@ router.get("/me", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+router.get("/", async (req, res) => {
+  const users = await Users.find().select("-password");
+  res.json(users);
+});
+
 
 // ------------------ UPDATE PROFILE ------------------
 router.put("/me", authMiddleware, upload.single("avatar"), async (req, res) => {
