@@ -15,6 +15,7 @@ import notificationRoutes from "./routes/notifications.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import passwordResetRoutes from "./routes/authPasswordReset.js";
 import aiRoutes from "./ai/aiRoutes.js";
+import simulationRoutes from "./routes/simulations.js";
 
 dotenv.config();
 const app = express();
@@ -94,6 +95,7 @@ app.use("/api/documents", documentsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/simulations", simulationRoutes);
 
 //  Health check route
 app.get("/", (req, res) => {
