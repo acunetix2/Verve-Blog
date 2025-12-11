@@ -1,12 +1,44 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 
-const userSchema = new mongoose.Schema({
-  googleId: { type: String }, // ✅ Optional: for Google OAuth users
-  email: { type: String, required: true, unique: true },
-  password: { type: String },
-  role: { type: String, default: "admin" }, // "admin" or "user"
-});
+const userSchema = new mongoose.Schema(
+  {
+    googleId: {
+      type: String,
+      default: null,
+    },
+
+    email: {
+      type: String,
+      required: [true, "Email is required"],
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    password: {
+      type: String,
+      minlength: 6,
+      select: false, // ❗ important: prevents password from being returned in queries
+    },
+
+    role: {
+      type: String,
+      enum: ["admin", "user"],
+      default: "admin",
+    },
+
+    // ⭐ SAFE IMAGE FIELD
+    profileImage: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+  },
+  {
+    timestamps: true, // adds createdAt + updatedAt
+  }
+);
 
 // 🔒 Hash password before saving (only if modified)
 userSchema.pre("save", async function (next) {
@@ -16,11 +48,11 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// 🔐 Compare password
+// 🔐 Compare password during login
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
 
-// ✅ Fix: Prevent OverwriteModelError
+// 🚫 Prevent OverwriteModelError in Next.js / hot reload
 const User = mongoose.models.User || mongoose.model("User", userSchema);
 export default User;

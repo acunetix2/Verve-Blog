@@ -85,33 +85,34 @@ router.get("/", async (req, res) => {
 
 
 // ------------------ UPDATE PROFILE ------------------
-router.put("/me", authMiddleware, upload.single("avatar"), async (req, res) => {
+router.put("/me", authMiddleware, upload.single("profileImage"), async (req, res) => {
   try {
     const { name, email } = req.body;
     const updateData = { name, email };
 
-    // Upload avatar to Cloudinary if provided
+    // If avatar file exists, upload to Cloudinary
     if (req.file) {
-      const result = await cloudinary.uploader.upload_stream(
-        { folder: "avatars" },
-        async (error, result) => {
-          if (error) {
-            console.error(error);
-            return res.status(500).json({ message: "Avatar upload failed" });
+      const uploaded = await new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "avatars" },
+          (error, result) => {
+            if (error) reject(error);
+            else resolve(result);
           }
-          updateData.avatar = result.secure_url;
+        );
+        stream.end(req.file.buffer);
+      });
 
-          const updatedUser = await Users.findByIdAndUpdate(req.user.id, updateData, { new: true }).select("-password");
-          res.json(updatedUser);
-        }
-      );
-
-      // Pipe the uploaded buffer to Cloudinary
-      result.end(req.file.buffer);
-    } else {
-      const updatedUser = await Users.findByIdAndUpdate(req.user.id, updateData, { new: true }).select("-password");
-      res.json(updatedUser);
+      updateData.profileImage = uploaded.secure_url; // ✅ Save to correct field
     }
+
+    const updatedUser = await Users.findByIdAndUpdate(
+      req.user.id,
+      updateData,
+      { new: true }
+    ).select("-password");
+
+    res.json(updatedUser);
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Profile update failed" });
