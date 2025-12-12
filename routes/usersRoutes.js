@@ -41,13 +41,13 @@ router.post("/signup", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await Users.findOne({ email });
+    const user = await Users.findOne({ email }).select("+password"); 
     if (!user) return res.status(401).json({ success: false, message: "Invalid credentials" });
 
     const isMatch = await user.comparePassword(password);
     if (!isMatch) return res.status(401).json({ success: false, message: "Invalid credentials" });
 
-    const token = jwt.sign({ id: user._id, role: "user" }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 
@@ -57,6 +57,7 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
+
 
 // ------------------ GET PROFILE ------------------
 router.get("/profile", authMiddleware, async (req, res) => {
