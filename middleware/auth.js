@@ -6,6 +6,10 @@ import jwt from "jsonwebtoken";
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
+ /**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 export const authMiddleware = (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;

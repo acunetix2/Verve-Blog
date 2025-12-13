@@ -1,11 +1,19 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
+
 import jwt from "jsonwebtoken";
-import User from "../models/User.js";
+import User from "../models/Users.js"; // ⚠️ ensure correct filename
 
 export const protect = async (req, res, next) => {
   try {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token)
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.split(" ")[1];
+
+    if (!token) {
       return res.status(401).json({ message: "⚠️ No token provided" });
+    }
 
     let decoded;
     try {
@@ -15,18 +23,39 @@ export const protect = async (req, res, next) => {
         return res
           .status(401)
           .json({ message: "⚠️ Token expired. Please login again." });
-      } else {
-        return res
-          .status(401)
-          .json({ message: "⚠️ Invalid token. Authentication failed." });
       }
+      return res
+        .status(401)
+        .json({ message: "⚠️ Invalid token. Authentication failed." });
     }
 
-    req.user = await User.findById(decoded.id).select("-password");
-    if (!req.user)
+    //  Fetch user INCLUDING sessions
+    const user = await User.findById(decoded.id);
+    if (!user) {
       return res
         .status(404)
         .json({ message: "⚠️ User not found. Authentication failed." });
+    }
+
+    //  Validate session
+    const session = user.sessions?.find(
+      (s) => s.sessionId === decoded.sessionId
+    );
+
+    if (!session) {
+      return res.status(401).json({
+        message: "⚠️ Session expired or revoked. Please login again.",
+      });
+    }
+
+    //  Update last active
+    session.lastActive = new Date();
+    session.isCurrent = true;
+    await user.save();
+
+    // Attach user WITHOUT password
+    req.user = user.toObject();
+    delete req.user.password;
 
     next();
   } catch (error) {
@@ -35,8 +64,10 @@ export const protect = async (req, res, next) => {
   }
 };
 
+// ---------------- ADMIN GUARD ----------------
 export const adminOnly = (req, res, next) => {
-  if (req.user?.role !== "admin")
+  if (req.user?.role !== "admin") {
     return res.status(403).json({ message: "⚠️ Admin access required" });
+  }
   next();
 };
