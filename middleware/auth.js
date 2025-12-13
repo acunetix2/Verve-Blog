@@ -1,4 +1,5 @@
 import jwt from "jsonwebtoken";
+import Users from "../models/Users.js"; // Import your Users model
 
 /**
  * Middleware to authenticate users using JWT
@@ -6,11 +7,11 @@ import jwt from "jsonwebtoken";
  * @param {import('express').Response} res
  * @param {import('express').NextFunction} next
  */
- /**
+/**
  * Author / Copyright: Iddy
  * All rights reserved.
  */
-export const authMiddleware = (req, res, next) => {
+export const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -29,6 +30,22 @@ export const authMiddleware = (req, res, next) => {
 
     // Attach decoded token to request
     req.user = decoded; // { id, role }
+
+    // --- Update session lastActive without altering current functionality ---
+    try {
+      const user = await Users.findById(decoded.id);
+      if (user && user.sessions.length > 0) {
+        const session = user.sessions.find(s => s.isCurrent);
+        if (session) {
+          session.lastActive = new Date();
+          await user.save();
+        }
+      }
+    } catch (err) {
+      console.error("Failed to update session lastActive:", err);
+      // Do NOT block authentication if this fails
+    }
+
     next();
   } catch (err) {
     console.error("Auth Middleware Error:", err);

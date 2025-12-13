@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import express from "express";
 import Users from "../models/Users.js";
 import jwt from "jsonwebtoken";
@@ -5,12 +9,14 @@ import bcrypt from "bcryptjs";
 import { authMiddleware } from "../middleware/auth.js";
 import multer from "multer";
 import path from "path";
-import cloudinary from "../config/cloudinary.js"; // Cloudinary config
+import cloudinary from "../config/cloudinary.js"; 
+import { UAParser } from "ua-parser-js";
+import geoip from "geoip-lite";
 
 const router = express.Router();
 
 // ------------------ MULTER SETUP FOR AVATAR UPLOADS ------------------
-const storage = multer.memoryStorage(); // store file in memory
+const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // ------------------ SIGNUP ------------------
@@ -41,15 +47,59 @@ router.post("/signup", async (req, res) => {
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const user = await Users.findOne({ email }).select("+password"); 
-    if (!user) return res.status(401).json({ success: false, message: "Invalid credentials" });
+
+    const user = await Users.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
 
     const isMatch = await user.comparePassword(password);
-    if (!isMatch) return res.status(401).json({ success: false, message: "Invalid credentials" });
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: "Invalid credentials" });
+    }
 
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    // 🔐 Create JWT
+    const token = jwt.sign(
+      { id: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+	// 🧠 Session info
+	const sessionId = jwt.decode(token).iat.toString(); // simple unique id
+
+	// Parse user agent
+	const parser = new UAParser(req.headers["user-agent"]);
+	const browser = parser.getBrowser().name || "Unknown";
+	const device = parser.getDevice().type === "mobile" ? "Mobile" : "Desktop";
+
+	// Get IP address
+	const ipAddress =
+	  req.headers["x-forwarded-for"]?.split(",")[0] ||
+	  req.socket.remoteAddress;
+	  // Lookup location with geoip-lite
+	let location = "Unknown";
+	const geo = geoip.lookup(ipAddress);
+	if (geo) {
+	  location = `${geo.city || "Unknown City"}, ${geo.country || "Unknown Country"}`;
+	}
+
+
+	// Mark all sessions inactive
+	user.sessions.forEach((s) => (s.isCurrent = false));
+
+	// Add new session
+	user.sessions.push({
+	  sessionId,
+	  device,
+	  browser,
+	  ipAddress,
+	  location,
+	  lastActive: new Date(),
+	  isCurrent: true,
     });
+
+    await user.save();
 
     res.json({ success: true, token });
   } catch (err) {
@@ -57,7 +107,6 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error" });
   }
 });
-
 
 // ------------------ GET PROFILE ------------------
 router.get("/profile", authMiddleware, async (req, res) => {
@@ -104,7 +153,7 @@ router.put("/me", authMiddleware, upload.single("profileImage"), async (req, res
         stream.end(req.file.buffer);
       });
 
-      updateData.profileImage = uploaded.secure_url; // ✅ Save to correct field
+      updateData.profileImage = uploaded.secure_url; 
     }
 
     const updatedUser = await Users.findByIdAndUpdate(
@@ -188,21 +237,12 @@ router.put("/me/preferences", authMiddleware, async (req, res) => {
 // ------------------ GET SESSIONS ------------------
 router.get("/me/sessions", authMiddleware, async (req, res) => {
   try {
-    // For now, return current session only
-    // In a real app, you'd store sessions in Redis or DB
-    const sessions = [
-      {
-        id: "current-session",
-        device: "Current Device",
-        browser: "Chrome",
-        location: "Nairobi, Kenya",
-        lastActive: "Just now",
-        isCurrent: true
-      }
-    ];
-    
-    res.json({ sessions });
+    const user = await Users.findById(req.user.id).select("sessions");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ sessions: user.sessions });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Failed to fetch sessions" });
   }
 });
@@ -210,9 +250,15 @@ router.get("/me/sessions", authMiddleware, async (req, res) => {
 // ------------------ REVOKE SESSION ------------------
 router.delete("/me/sessions/:sessionId", authMiddleware, async (req, res) => {
   try {
-    // In a real app, you'd delete the session from storage
+    const user = await Users.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.sessions = user.sessions.filter(s => s.sessionId !== req.params.sessionId);
+    await user.save();
+
     res.json({ message: "Session revoked successfully" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Failed to revoke session" });
   }
 });
@@ -220,9 +266,15 @@ router.delete("/me/sessions/:sessionId", authMiddleware, async (req, res) => {
 // ------------------ REVOKE ALL SESSIONS ------------------
 router.delete("/me/sessions/all", authMiddleware, async (req, res) => {
   try {
-    // In a real app, you'd delete all sessions except current
-    res.json({ message: "All sessions revoked successfully" });
+    const user = await Users.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.sessions = user.sessions.filter(s => s.isCurrent); 
+    await user.save();
+
+    res.json({ message: "All other sessions revoked successfully" });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: "Failed to revoke sessions" });
   }
 });
