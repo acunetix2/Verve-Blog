@@ -185,8 +185,15 @@ router.post("/login", async (req, res) => {
 
     await user.save();
 
-    // ✅ Return JWT
-    res.json({ success: true, token });
+    // ✅ Return JWT + user role
+	res.json({
+	  success: true,
+	  token,
+	  user: {
+		id: user._id,
+		role: user.role,
+	  },
+	});
   } catch (err) {
     console.error(err);
     res
