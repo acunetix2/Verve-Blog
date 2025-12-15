@@ -97,10 +97,6 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/simulations", simulationRoutes);
 
-//  Health check route
-app.get("/", (req, res) => {
-  res.send("🟢 Verve Blog API running fine!");
-});
 
 // Global error handler
 app.use((err, req, res, next) => {
