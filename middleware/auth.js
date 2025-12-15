@@ -31,14 +31,34 @@ export const authMiddleware = async (req, res, next) => {
     // Attach decoded token to request
     req.user = decoded; // { id, role }
 
+    // -------- ADD: EMAIL VERIFICATION CHECK --------
+    const verifiedUser = await Users.findById(decoded.id).select(
+      "emailVerified authProvider sessions"
+    );
+
+    if (!verifiedUser) {
+      return res.status(401).json({ success: false, message: "User not found" });
+    }
+
+    // Block unverified LOCAL users
+    if (
+      verifiedUser.authProvider === "local" &&
+      verifiedUser.emailVerified === false
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Email not verified. Please verify your email to continue.",
+      });
+    }
+    // -------- END ADD --------
+
     // --- Update session lastActive without altering current functionality ---
     try {
-      const user = await Users.findById(decoded.id);
-      if (user && user.sessions.length > 0) {
-        const session = user.sessions.find(s => s.isCurrent);
+      if (verifiedUser.sessions && verifiedUser.sessions.length > 0) {
+        const session = verifiedUser.sessions.find(s => s.isCurrent);
         if (session) {
           session.lastActive = new Date();
-          await user.save();
+          await verifiedUser.save();
         }
       }
     } catch (err) {

@@ -25,6 +25,11 @@ const userSchema = new mongoose.Schema(
   {
     googleId: { type: String, default: null },
 
+	authProvider: {
+	  type: String,
+	  enum: ["local", "google"],
+	  default: "local",
+	},
     email: {
       type: String,
       required: true,
@@ -55,6 +60,20 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+	// -------- EMAIL VERIFICATION --------
+	emailVerified: {
+	  type: Boolean,
+	  default: false,
+	},
+
+	emailVerificationToken: {
+	  type: String,
+	  select: false,
+	},
+
+	emailVerificationExpires: {
+	  type: Date,
+	},
 
     // -------- PREFERENCES --------
     preferences: {
