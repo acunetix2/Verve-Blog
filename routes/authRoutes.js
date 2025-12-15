@@ -92,18 +92,25 @@ router.get(
 router.get(
   "/google/callback",
   passport.authenticate("google", { session: false, failureRedirect: "/" }),
-  (req, res) => {
+  async (req, res) => {
     try {
+      // Ensure emailVerified is true for Google users
+      if (!req.user.emailVerified) {
+        req.user.emailVerified = true;
+        await req.user.save();
+      }
+
       const token = jwt.sign(
         { id: req.user._id, email: req.user.email, role: req.user.role },
         process.env.JWT_SECRET,
         { expiresIn: "2h" }
       );
 
-      // ?? Send to frontend with token + role
-      res.redirect(
-        `${process.env.FRONTEND_URL}/login?token=${token}&role=${req.user.role}`
-      );
+      // Send both token and user object to frontend
+      const frontendRedirect = `${process.env.FRONTEND_URL}/login?token=${token}&role=${req.user.role}`;
+
+      // Optionally append user info as query (or just rely on frontend fetch after login)
+      res.redirect(frontendRedirect);
     } catch (err) {
       console.error("Error generating token:", err);
       res.redirect("/");
