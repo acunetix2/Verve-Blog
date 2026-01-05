@@ -1,4 +1,9 @@
-// backend/routes/simulations.js
+
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
+ // backend/routes/simulations.js
 import express from "express";
 import AttackSimulation from "../models/AttackSimulation.js";
 import cloudinary from "../config/cloudinary.js";

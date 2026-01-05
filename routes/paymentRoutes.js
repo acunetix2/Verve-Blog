@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import express from "express";
 import Stripe from "stripe";
 import paypal from "@paypal/checkout-server-sdk";

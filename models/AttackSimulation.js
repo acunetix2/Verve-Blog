@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 // backend/models/AttackSimulation.js
 import mongoose from "mongoose";
 

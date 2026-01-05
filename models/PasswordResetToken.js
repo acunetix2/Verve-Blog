@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import mongoose from "mongoose";
 
 const resetSchema = new mongoose.Schema(

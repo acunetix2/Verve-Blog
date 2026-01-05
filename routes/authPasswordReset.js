@@ -1,3 +1,8 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
+ 
 import express from "express";
 import crypto from "crypto";
 import User from "../models/User.js";
@@ -27,7 +32,6 @@ router.post("/forgot-password", async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user) {
-      // Security: don't reveal if email exists
       return res.json({ message: "If that email exists, a reset link was sent" });
     }
 
@@ -38,7 +42,7 @@ router.post("/forgot-password", async (req, res) => {
     await PasswordResetToken.create({
       userId: user._id,
       token: hashedToken,
-      expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour
+      expiresAt: Date.now() + 60 * 60 * 1000, 
     });
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}&email=${email}`;

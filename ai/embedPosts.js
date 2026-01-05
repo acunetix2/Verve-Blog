@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import mongoose from "mongoose";
 import Post from "../models/Post.js";
 import fetch from "node-fetch"; // If using Node <18

@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import { v2 as cloudinary } from "cloudinary";
 
 cloudinary.config({

@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import express from "express";
 import Notification from "../models/Notification.js";
 import { authMiddleware } from "../middleware/auth.js";

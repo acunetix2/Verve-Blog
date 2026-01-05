@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import mongoose from "mongoose";
 import slugify from "slugify";
 
@@ -29,6 +33,29 @@ const postSchema = new mongoose.Schema(
     likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     viewedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     embedding: { type: [Number], index: "vector", default: [] },
+
+    // Analytics fields
+    totalEngagements: { type: Number, default: 0 },
+    engagementRate: { type: Number, default: 0 },
+    
+    // SEO fields
+    seoTitle: { type: String },
+    seoDescription: { type: String },
+    
+    // Media
+    thumbnail: { type: String },
+    
+    // Author reference for better queries
+    authorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+
+    // Series/Collections field
+    series: { type: mongoose.Schema.Types.ObjectId, ref: "Series", default: null },
+    seriesOrder: { type: Number, default: 0 },
+
+    // Post Scheduling
+    status: { type: String, enum: ["draft", "published", "scheduled"], default: "draft" },
+    publishedAt: { type: Date, default: null },
+    scheduledAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

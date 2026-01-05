@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import express from "express";
 import Post from "../models/Post.js";
 import fetch from "node-fetch";
@@ -11,14 +15,14 @@ Always be context-aware and cybersecurity-focused.
 `;
 
 // ----------------------
-// ✅ EDEN AI ENDPOINTS
+//  EDEN AI ENDPOINTS
 // ----------------------
 const EDEN_CHAT = "https://api.edenai.run/v2/text/chat";
 const EDEN_EMBED = "https://api.edenai.run/v2/ai/embedding";
 
 //
 // ----------------------
-// ✅ EMBEDDING FUNCTION
+//  EMBEDDING FUNCTION
 // ----------------------
 async function createEmbedding(text) {
   try {
@@ -50,7 +54,7 @@ async function createEmbedding(text) {
 
 //
 // ----------------------
-// ✅ CHAT FUNCTION
+//  CHAT FUNCTION
 // ----------------------
 async function callEdenChat(message, context) {
   try {
@@ -80,7 +84,7 @@ async function callEdenChat(message, context) {
 
 //
 // ----------------------
-// ✅ NEW: /embed route
+//  NEW: /embed route
 // ----------------------
 router.post("/embed", async (req, res) => {
   const { text } = req.body;
@@ -98,7 +102,7 @@ router.post("/embed", async (req, res) => {
 
 //
 // ----------------------
-// 💬 CHAT ROUTE
+//  CHAT ROUTE
 // ----------------------
 router.post("/chat", async (req, res) => {
   try {

@@ -1,3 +1,8 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
+
 import express from "express";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
@@ -56,7 +61,14 @@ router.post("/login", async (req, res) => {
     res.json({
       message: "Login successful",
       token,
-      user: { id: user._id, email: user.email, role: user.role },
+      user: { 
+        _id: user._id, 
+        email: user.email, 
+        name: user.name || user.email,
+        role: user.role,
+        profileImage: user.profileImage,
+        joinDate: user.createdAt,
+      },
     });
   } catch (error) {
     console.error("Login error:", error);
@@ -78,6 +90,40 @@ router.get("/verify", (req, res) => {
     res.json({ valid: true, decoded });
   } catch (error) {
     res.json({ valid: false, message: error.message });
+  }
+});
+
+/* ---------------------------------------------------
+   CHANGE PASSWORD
+--------------------------------------------------- */
+router.post("/change-password", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    const { newPassword } = req.body;
+    if (!newPassword) {
+      return res.status(400).json({ message: "New password is required" });
+    }
+
+    const user = await User.findById(decoded.id);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Update password
+    user.password = newPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Change password error:", error);
+    res.status(500).json({ message: "Failed to change password" });
   }
 });
 
@@ -119,17 +165,46 @@ router.get(
 );
 
 /* ---------------------------------------------------
-   OPTIONAL COOKIE CHECK
+   GET CURRENT USER
 --------------------------------------------------- */
-router.get("/me", (req, res) => {
-  const token = req.cookies.google_token;
-  if (!token) return res.json({ authenticated: false });
-
+router.get("/me", async (req, res) => {
   try {
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return res.status(401).json({ authenticated: false, message: "No token provided" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ authenticated: false, message: "Invalid token format" });
+    }
+
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ authenticated: true, user: decoded });
+    
+    // Fetch full user data from database
+    const user = await User.findById(decoded.id).select("-password");
+    
+    if (!user) {
+      return res.status(404).json({ authenticated: false, message: "User not found" });
+    }
+
+    res.json({ 
+      authenticated: true, 
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name || user.email,
+        role: user.role,
+        joinDate: user.createdAt,
+        posts: user.posts || 0,
+        status: user.status || "active",
+        profileImage: user.profileImage,
+      }
+    });
   } catch (err) {
-    res.json({ authenticated: false });
+    console.error("Error fetching user:", err);
+    res.status(401).json({ authenticated: false, message: "Invalid token" });
   }
 });
 

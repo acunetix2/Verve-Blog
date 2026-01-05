@@ -34,6 +34,110 @@ const userSchema = new mongoose.Schema(
       default: "",
       trim: true,
     },
+
+    // Profile enhancements
+    name: {
+      type: String,
+      default: "",
+    },
+
+    bio: {
+      type: String,
+      default: "",
+      maxlength: 500,
+    },
+
+    location: {
+      type: String,
+      default: "",
+    },
+
+    website: {
+      type: String,
+      default: "",
+    },
+
+    github: {
+      type: String,
+      default: "",
+    },
+
+    linkedin: {
+      type: String,
+      default: "",
+    },
+
+    twitter: {
+      type: String,
+      default: "",
+    },
+
+    // Statistics
+    totalPosts: {
+      type: Number,
+      default: 0,
+    },
+
+    totalViews: {
+      type: Number,
+      default: 0,
+    },
+
+    totalLikes: {
+      type: Number,
+      default: 0,
+    },
+
+    // Badges array
+    badges: [
+      {
+        id: String,
+        name: String,
+        description: String,
+        icon: String,
+        unlockedDate: Date,
+        color: String,
+      },
+    ],
+
+    // Achievements array
+    achievements: [
+      {
+        id: String,
+        title: String,
+        description: String,
+        progress: Number,
+        maxProgress: Number,
+        icon: String,
+        completed: Boolean,
+      },
+    ],
+
+    // Contribution stats
+    stats: {
+      postsPublished: { type: Number, default: 0 },
+      articlesRead: { type: Number, default: 0 },
+      resourcesShared: { type: Number, default: 0 },
+      communitiesJoined: { type: Number, default: 0 },
+    },
+
+    // Theme settings
+    themeSettings: {
+      theme: { type: String, enum: ["light", "dark", "system"], default: "system" },
+      contrast: { type: String, enum: ["normal", "high"], default: "normal" },
+      fontSize: { type: Number, default: 100, min: 80, max: 150 },
+      useSystemFont: { type: Boolean, default: false },
+      animationReduces: { type: Boolean, default: false },
+    },
+
+    // Email notifications settings
+    notificationSettings: {
+      emailNotifications: { type: Boolean, default: true },
+      newPostNotifications: { type: Boolean, default: true },
+      likeNotifications: { type: Boolean, default: true },
+      commentNotifications: { type: Boolean, default: true },
+      shareNotifications: { type: Boolean, default: true },
+    },
   },
   {
     timestamps: true, // adds createdAt + updatedAt

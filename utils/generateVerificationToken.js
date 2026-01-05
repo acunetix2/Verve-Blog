@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import crypto from "crypto";
 
 export const generateVerificationToken = () => {

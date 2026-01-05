@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import express from "express";
 import multer from "multer";
 import Document from "../models/documents.js";

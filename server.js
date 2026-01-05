@@ -16,6 +16,11 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import passwordResetRoutes from "./routes/authPasswordReset.js";
 import aiRoutes from "./ai/aiRoutes.js";
 import simulationRoutes from "./routes/simulations.js";
+import featuresRoutes from "./routes/featuresRoutes.js";
+import userProfileRoutes from "./routes/userProfileRoutes.js";
+import seriesRoutes from "./routes/seriesRoutes.js";
+import schedulingRoutes from "./routes/schedulingRoutes.js";
+import emailDigestRoutes from "./routes/emailDigestRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -96,6 +101,16 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/simulations", simulationRoutes);
+app.use("/api/features", featuresRoutes);
+app.use("/api/analytics", featuresRoutes);
+app.use("/api/bookmarks", featuresRoutes);
+app.use("/api/recommendations", featuresRoutes);
+app.use("/api/engagement", featuresRoutes);
+app.use("/api/users/profile", userProfileRoutes);
+app.use("/api/users", userProfileRoutes);
+app.use("/api/series", seriesRoutes);
+app.use("/api/posts/schedule", schedulingRoutes);
+app.use("/api/digest", emailDigestRoutes);
 
 
 // Global error handler

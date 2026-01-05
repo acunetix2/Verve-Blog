@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import mongoose from "mongoose";
 
 const documentSchema = new mongoose.Schema({

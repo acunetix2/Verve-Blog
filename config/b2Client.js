@@ -1,3 +1,7 @@
+/**
+ * Author / Copyright: Iddy
+ * All rights reserved.
+ */
 import { S3Client } from "@aws-sdk/client-s3";
 
 const b2Client = new S3Client({
