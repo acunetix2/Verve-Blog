@@ -167,7 +167,7 @@ router.get(
 /* ---------------------------------------------------
    GET CURRENT USER
 --------------------------------------------------- */
-router.get("/me", async (req, res) => {
+router.get("/v", async (req, res) => {
   try {
     // Get token from Authorization header
     const authHeader = req.headers.authorization;

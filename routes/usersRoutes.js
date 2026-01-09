@@ -4,6 +4,8 @@
  */
 import express from "express";
 import Users from "../models/Users.js";
+import Post from "../models/Post.js";
+import ReadingHistory from "../models/ReadingHistory.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { authMiddleware } from "../middleware/auth.js";
@@ -328,9 +330,142 @@ router.get("/me", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// GET CURRENT USER - /v alias
+router.get("/v", authMiddleware, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Track reading activity - Call when user opens an article
+router.post("/track-reading/:postId", authMiddleware, async (req, res) => {
+  try {
+    const { timeSpent, progress } = req.body;
+    const { postId } = req.params;
+
+    // Create or update reading history record
+    const readingRecord = await ReadingHistory.findOneAndUpdate(
+      { userId: req.user.id, postId },
+      {
+        timeSpent: timeSpent || 0,
+        progress: progress || 0,
+        readAt: new Date()
+      },
+      { upsert: true, new: true }
+    );
+
+    // Increment post views if it's a new reading record
+    if (readingRecord.isNew || !readingRecord._id) {
+      await Post.findByIdAndUpdate(postId, { $inc: { views: 1 } });
+    }
+
+    res.json({ message: "Reading tracked successfully", record: readingRecord });
+  } catch (error) {
+    console.error("Reading tracking error:", error);
+    res.status(500).json({ message: "Failed to track reading" });
+  }
+});
+
 router.get("/", async (req, res) => {
   const users = await Users.find().select("-password");
   res.json(users);
+});
+
+// Search users by name or email
+router.get("/search", async (req, res) => {
+  try {
+    const { q, limit = 10 } = req.query;
+
+    if (!q || q.trim().length < 2) {
+      return res.json({ users: [] });
+    }
+
+    const users = await Users.find({
+      $or: [
+        { name: { $regex: q, $options: "i" } },
+        { email: { $regex: q, $options: "i" } },
+        { bio: { $regex: q, $options: "i" } },
+      ],
+    })
+      .select("-password")
+      .limit(parseInt(limit))
+      .lean();
+
+    res.json({ users });
+  } catch (error) {
+    console.error("User search error:", error);
+    res.status(500).json({ message: "Failed to search users" });
+  }
+});
+
+// Get dashboard stats for current user
+router.get("/dashboard-stats", authMiddleware, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Get user's posts
+    const userPosts = await Post.find({ authorId: req.user.id });
+    
+    const totalViews = userPosts.reduce((sum, post) => sum + (post.views || 0), 0);
+    const totalLikes = userPosts.reduce((sum, post) => sum + (post.likes || 0), 0);
+    const totalComments = userPosts.reduce((sum, post) => sum + ((post.comments && post.comments.length) || 0), 0);
+
+    // Get views and comments this month
+    const thisMonth = new Date();
+    thisMonth.setDate(1);
+    const postsThisMonth = userPosts.filter(p => new Date(p.createdAt) >= thisMonth);
+    const viewsThisMonth = postsThisMonth.reduce((sum, post) => sum + (post.views || 0), 0);
+    const commentsThisMonth = postsThisMonth.reduce((sum, post) => sum + ((post.comments && post.comments.length) || 0), 0);
+
+    // Get recent posts (last 5)
+    const recentPosts = userPosts
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .slice(0, 5)
+      .map(p => ({
+        _id: p._id,
+        title: p.title,
+        views: p.views || 0,
+        likes: p.likes || 0,
+        createdAt: p.createdAt
+      }));
+
+    // Calculate reading stats from ReadingHistory
+    const readingHistory = await ReadingHistory.find({ userId: req.user.id });
+    const articlesRead = readingHistory.length;
+    const hoursSpent = Math.round(readingHistory.reduce((sum, r) => sum + (r.timeSpent || 0), 0) / 3600) || 0;
+    const averageReadTime = articlesRead > 0 ? Math.round(readingHistory.reduce((sum, r) => sum + (r.timeSpent || 0), 0) / articlesRead / 60) : 0;
+
+    res.json({
+      userId: user._id,
+      name: user.name || "User",
+      email: user.email,
+      level: user.level || "beginner",
+      totalPosts: userPosts.length,
+      totalViews,
+      totalLikes,
+      totalComments,
+      viewsThisMonth,
+      commentsThisMonth,
+      postsPublished: userPosts.length,
+      recentPosts,
+      readingStats: {
+        articlesRead,
+        hoursSpent,
+        averageReadTime
+      },
+      badges: user.badges || [],
+      joinDate: user.createdAt,
+    });
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    res.status(500).json({ message: "Failed to fetch dashboard stats" });
+  }
 });
 
 

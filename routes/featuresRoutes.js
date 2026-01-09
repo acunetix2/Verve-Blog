@@ -228,7 +228,8 @@ router.get("/search", async (req, res) => {
         sortObj = { likes: -1 };
         break;
       default:
-        sortObj = { score: { $meta: "textScore" } };
+        // Default to date sorting instead of text score (no text index)
+        sortObj = { createdAt: -1 };
     }
 
     const skip = (parseInt(page) - 1) * parseInt(limit);

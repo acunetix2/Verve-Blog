@@ -24,11 +24,61 @@ const postSchema = new mongoose.Schema(
     views: { type: Number, default: 0 },
     comments: [
       {
-        user: { type: String },
-        text: { type: String, required: true },
-        date: { type: Date, default: Date.now },
+        _id: String,
+        author: {
+          _id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          name: String,
+          profileImage: String,
+        },
+        content: String,
+        likes: { type: Number, default: 0 },
+        isLiked: { type: Boolean, default: false },
+        replies: [
+          {
+            _id: String,
+            author: {
+              _id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+              name: String,
+              profileImage: String,
+            },
+            content: String,
+            likes: { type: Number, default: 0 },
+            isLiked: { type: Boolean, default: false },
+            replies: { type: Array, default: [] },
+            createdAt: { type: Date, default: Date.now },
+            updatedAt: { type: Date, default: Date.now },
+          },
+        ],
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
       },
     ],
+
+    // Reviews
+    reviews: [
+      {
+        _id: String,
+        author: {
+          _id: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          name: String,
+          profileImage: String,
+        },
+        rating: { type: Number, min: 1, max: 5 },
+        comment: String,
+        helpful: { type: Number, default: 0 },
+        unhelpful: { type: Number, default: 0 },
+        userVote: String,
+        createdAt: { type: Date, default: Date.now },
+        updatedAt: { type: Date, default: Date.now },
+      },
+    ],
+
+    // Reactions
+    reactions: {
+      like: { count: { type: Number, default: 0 } },
+      love: { count: { type: Number, default: 0 } },
+      useful: { count: { type: Number, default: 0 } },
+    },
 
     likedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     viewedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],

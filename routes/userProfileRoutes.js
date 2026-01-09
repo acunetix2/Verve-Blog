@@ -201,8 +201,15 @@ router.get("/badges", auth, async (req, res) => {
 });
 
 // Get public user profile
+import mongoose from "mongoose";
+// ...existing code...
+
 router.get("/:userId", async (req, res) => {
   try {
+    // Validate ObjectId
+    if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      return res.status(400).json({ message: "Invalid user ID" });
+    }
     const user = await User.findById(req.params.userId).select("-password");
     if (!user) return res.status(404).json({ message: "User not found" });
 

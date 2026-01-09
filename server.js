@@ -1,3 +1,5 @@
+import adminRoutes from "./routes/adminRoutes.js";
+import twoFactorRoutes from "./routes/twoFactorRoutes.js";
 import express from "express";
 import mongoose from "mongoose";
 import cors from "cors";
@@ -24,6 +26,8 @@ import emailDigestRoutes from "./routes/emailDigestRoutes.js";
 
 dotenv.config();
 const app = express();
+app.use("/api/admin", adminRoutes);
+app.use("/api/2fa", twoFactorRoutes);
 const server = http.createServer(app);
 
 // Middleware

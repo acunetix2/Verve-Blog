@@ -307,4 +307,276 @@ router.put("/:id", authMiddleware, async (req, res) => {
   }
 });
 
+// ============================
+// COMMENTS (NEW ENDPOINTS - by postId)
+// ============================
+router.get("/:postId/comments", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post.comments || []);
+  } catch (err) {
+    console.error("GET COMMENTS ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:postId/comments", authMiddleware, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const comment = {
+      _id: new Date().getTime().toString(),
+      author: {
+        _id: user._id,
+        name: user.name,
+        profileImage: user.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"
+      },
+      content,
+      likes: 0,
+      isLiked: false,
+      replies: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (!post.comments) post.comments = [];
+    post.comments.push(comment);
+    await post.save();
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error("ADD COMMENT ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:postId/comments/:commentId/replies", authMiddleware, async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const comment = post.comments?.find(c => c._id?.toString() === req.params.commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    const reply = {
+      _id: new Date().getTime().toString(),
+      author: {
+        _id: user._id,
+        name: user.name,
+        profileImage: user.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"
+      },
+      content,
+      likes: 0,
+      isLiked: false,
+      replies: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (!comment.replies) comment.replies = [];
+    comment.replies.push(reply);
+    await post.save();
+
+    res.status(201).json(reply);
+  } catch (err) {
+    console.error("ADD REPLY ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================
+// REVIEWS (NEW ENDPOINTS)
+// ============================
+router.get("/:postId/reviews", async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const reviews = post.reviews || [];
+    const averageRating = reviews.length > 0 
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : 0;
+
+    res.json({ reviews, averageRating });
+  } catch (err) {
+    console.error("GET REVIEWS ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:postId/reviews", authMiddleware, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    if (!rating || !comment) return res.status(400).json({ message: "Rating and comment are required" });
+
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const review = {
+      _id: new Date().getTime().toString(),
+      author: {
+        _id: user._id,
+        name: user.name,
+        profileImage: user.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"
+      },
+      rating: parseInt(rating),
+      comment,
+      helpful: 0,
+      unhelpful: 0,
+      userVote: null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (!post.reviews) post.reviews = [];
+    post.reviews.push(review);
+    await post.save();
+
+    res.status(201).json(review);
+  } catch (err) {
+    console.error("ADD REVIEW ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.put("/:postId/reviews/:reviewId", authMiddleware, async (req, res) => {
+  try {
+    const { rating, comment } = req.body;
+    
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const review = post.reviews?.find(r => r._id?.toString() === req.params.reviewId);
+    if (!review) return res.status(404).json({ message: "Review not found" });
+
+    if (review.author._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized to update this review" });
+    }
+
+    review.rating = parseInt(rating) || review.rating;
+    review.comment = comment || review.comment;
+    review.updatedAt = new Date();
+
+    await post.save();
+    res.json(review);
+  } catch (err) {
+    console.error("UPDATE REVIEW ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete("/:postId/reviews/:reviewId", authMiddleware, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const reviewIndex = post.reviews?.findIndex(r => r._id?.toString() === req.params.reviewId);
+    if (reviewIndex === -1) return res.status(404).json({ message: "Review not found" });
+
+    const review = post.reviews[reviewIndex];
+    if (review.author._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized to delete this review" });
+    }
+
+    post.reviews.splice(reviewIndex, 1);
+    await post.save();
+
+    res.json({ message: "Review deleted successfully" });
+  } catch (err) {
+    console.error("DELETE REVIEW ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:postId/reviews/:reviewId/helpful", authMiddleware, async (req, res) => {
+  try {
+    const { helpful } = req.body;
+    
+    const post = await Post.findById(req.params.postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const review = post.reviews?.find(r => r._id?.toString() === req.params.reviewId);
+    if (!review) return res.status(404).json({ message: "Review not found" });
+
+    if (helpful) {
+      review.helpful = (review.helpful || 0) + 1;
+    } else {
+      review.unhelpful = (review.unhelpful || 0) + 1;
+    }
+
+    await post.save();
+    res.json(review);
+  } catch (err) {
+    console.error("MARK HELPFUL ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================
+// REACTIONS (NEW ENDPOINTS)
+// ============================
+router.get("/:targetType/:targetId/reactions", async (req, res) => {
+  try {
+    const { targetType, targetId } = req.params;
+
+    if (targetType === "post") {
+      const post = await Post.findById(targetId);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+
+      res.json({
+        like: { count: post.reactions?.like?.count || 0, userReacted: false },
+        love: { count: post.reactions?.love?.count || 0, userReacted: false },
+        useful: { count: post.reactions?.useful?.count || 0, userReacted: false }
+      });
+    } else {
+      res.status(400).json({ message: "Invalid target type" });
+    }
+  } catch (err) {
+    console.error("GET REACTIONS ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post("/:targetType/:targetId/reactions", authMiddleware, async (req, res) => {
+  try {
+    const { type } = req.body;
+    const { targetType, targetId } = req.params;
+
+    if (targetType === "post") {
+      const post = await Post.findById(targetId);
+      if (!post) return res.status(404).json({ message: "Post not found" });
+
+      if (!post.reactions) post.reactions = { like: { count: 0 }, love: { count: 0 }, useful: { count: 0 } };
+      if (!post.reactions[type]) post.reactions[type] = { count: 0 };
+
+      post.reactions[type].count = (post.reactions[type].count || 0) + 1;
+      await post.save();
+
+      res.json({ message: "Reaction added", reactions: post.reactions });
+    } else {
+      res.status(400).json({ message: "Invalid target type" });
+    }
+  } catch (err) {
+    console.error("ADD REACTION ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 export default router;
