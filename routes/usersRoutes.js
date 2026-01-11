@@ -4,8 +4,11 @@
  */
 import express from "express";
 import Users from "../models/Users.js";
+import User from "../models/User.js";
 import Post from "../models/Post.js";
 import ReadingHistory from "../models/ReadingHistory.js";
+import UserProgress from "../models/UserProgress.js";
+import Course from "../models/Course.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { authMiddleware } from "../middleware/auth.js";
@@ -544,28 +547,65 @@ router.delete("/me", authMiddleware, async (req, res) => {
   }
 });
 
+// ------------------ GET PREFERENCES ------------------
+router.get("/me/preferences", authMiddleware, async (req, res) => {
+  try {
+    const user = await Users.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    res.json({
+      success: true,
+      themeSettings: user.themeSettings,
+      notificationSettings: user.notificationSettings,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Failed to fetch preferences" });
+  }
+});
+
 // ------------------ UPDATE PREFERENCES ------------------
 router.put("/me/preferences", authMiddleware, async (req, res) => {
   try {
-    const { emailNotifications, pushNotifications, language, timezone } = req.body;
+    const { themeSettings, notificationSettings } = req.body;
+    
+    const updateData = {};
+    
+    if (themeSettings) {
+      updateData.themeSettings = {
+        theme: themeSettings.theme || "system",
+        contrast: themeSettings.contrast || "normal",
+        fontSize: themeSettings.fontSize || 100,
+        useSystemFont: themeSettings.useSystemFont || false,
+        animationReduces: themeSettings.animationReduces || false,
+      };
+    }
+    
+    if (notificationSettings) {
+      updateData.notificationSettings = {
+        emailNotifications: notificationSettings.emailNotifications !== undefined ? notificationSettings.emailNotifications : true,
+        newPostNotifications: notificationSettings.newPostNotifications !== undefined ? notificationSettings.newPostNotifications : true,
+        likeNotifications: notificationSettings.likeNotifications !== undefined ? notificationSettings.likeNotifications : true,
+        commentNotifications: notificationSettings.commentNotifications !== undefined ? notificationSettings.commentNotifications : true,
+        shareNotifications: notificationSettings.shareNotifications !== undefined ? notificationSettings.shareNotifications : true,
+      };
+    }
     
     const user = await Users.findByIdAndUpdate(
       req.user.id,
-      {
-        preferences: {
-          emailNotifications,
-          pushNotifications,
-          language,
-          timezone
-        }
-      },
+      updateData,
       { new: true }
     ).select("-password");
 
-    res.json({ preferences: user.preferences });
+    res.json({
+      success: true,
+      message: "Preferences updated successfully",
+      themeSettings: user.themeSettings,
+      notificationSettings: user.notificationSettings,
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Failed to update preferences" });
+    res.status(500).json({ success: false, message: "Failed to update preferences" });
   }
 });
 
@@ -611,6 +651,60 @@ router.delete("/me/sessions/all", authMiddleware, async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: "Failed to revoke sessions" });
+  }
+});
+
+// ------------------ GET USER'S ENROLLED COURSES ------------------
+router.get("/courses/enrolled", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    // Get user with populated enrolled courses
+    const user = await User.findById(userId).populate('enrolledCourses.courseId');
+    
+    if (!user || !user.enrolledCourses || user.enrolledCourses.length === 0) {
+      return res.json({ 
+        success: true,
+        enrolledCourses: []
+      });
+    }
+    
+    // Also fetch UserProgress to get completion info
+    const progressRecords = await UserProgress.find({ userId }).lean();
+    const progressMap = new Map(progressRecords.map(p => [p.courseId.toString(), p]));
+    
+    // Combine course data with progress info - filter out deleted courses
+    const enrolledCourses = user.enrolledCourses
+      .filter(enrollment => enrollment && enrollment.courseId && enrollment.courseId._id) // Properly filter null references
+      .map(enrollment => {
+        try {
+          const courseId = enrollment.courseId._id.toString();
+          const progress = progressMap.get(courseId);
+          return {
+            ...enrollment.courseId.toObject(),
+            progress: {
+              completedLessons: progress?.completedLessons || [],
+              enrolledAt: enrollment.enrolledAt,
+              lastAccessed: enrollment.lastAccessed
+            }
+          };
+        } catch (mapErr) {
+          console.error('Error mapping enrollment:', mapErr);
+          return null;
+        }
+      })
+      .filter(course => course !== null); // Remove any failed mappings
+    
+    res.json({ 
+      success: true,
+      enrolledCourses
+    });
+  } catch (err) {
+    console.error("Fetch enrolled courses error:", err);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch enrolled courses" 
+    });
   }
 });
 

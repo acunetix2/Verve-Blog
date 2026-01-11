@@ -1,4 +1,5 @@
 import adminRoutes from "./routes/adminRoutes.js";
+import coursesRoutes from "./routes/coursesRoutes.js";
 import twoFactorRoutes from "./routes/twoFactorRoutes.js";
 import express from "express";
 import mongoose from "mongoose";
@@ -26,11 +27,12 @@ import emailDigestRoutes from "./routes/emailDigestRoutes.js";
 
 dotenv.config();
 const app = express();
-app.use("/api/admin", adminRoutes);
-app.use("/api/2fa", twoFactorRoutes);
-const server = http.createServer(app);
 
-// Middleware
+// ============================================================
+// MIDDLEWARE (MUST be before routes)
+// ============================================================
+
+// Body parser
 app.use(express.json());
 
 // Session setup (needed for Passport)
@@ -46,11 +48,8 @@ app.use(
   })
 );
 app.set("trust proxy", 1);
-// Initialize Passport
-app.use(passport.initialize());
-app.use(passport.session());
 
-// Allow all development origins
+// CORS - MUST be before routes
 app.use(
   cors({
     origin: [
@@ -58,14 +57,20 @@ app.use(
       "http://127.0.0.1:8080",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-	  "https://vervehub.onrender.com",
-	  "https://vervehub.netlify.app",
+      "https://vervehub.onrender.com",
+      "https://vervehub.netlify.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
@@ -74,8 +79,8 @@ const io = new Server(server, {
       "http://127.0.0.1:8080",
       "http://localhost:5173",
       "http://127.0.0.1:5173",
-	  "https://vervehub.onrender.com",
-	  "https://vervehub.netlify.app",
+      "https://vervehub.onrender.com",
+      "https://vervehub.netlify.app",
     ], 
     methods: ["GET", "POST"],
   },
@@ -83,7 +88,10 @@ const io = new Server(server, {
 
 // Make io accessible in routes
 app.set("io", io);
-//  MongoDB connection
+
+// ============================================================
+// MONGODB CONNECTION
+// ============================================================
 mongoose
   .connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -95,7 +103,12 @@ mongoose
     process.exit(1);
   });
 
-//  API routes
+// ============================================================
+// API ROUTES (AFTER middleware)
+// ============================================================
+app.use("/api/admin", adminRoutes);
+app.use("/api/courses", coursesRoutes);
+app.use("/api/2fa", twoFactorRoutes);
 app.use("/api/posts", postRoutes);
 app.use("/api/auth", authRoutes); 
 app.use("/api/auth", passwordResetRoutes);
@@ -116,8 +129,9 @@ app.use("/api/series", seriesRoutes);
 app.use("/api/posts/schedule", schedulingRoutes);
 app.use("/api/digest", emailDigestRoutes);
 
-
-// Global error handler
+// ============================================================
+// ERROR HANDLER (AFTER all routes)
+// ============================================================
 app.use((err, req, res, next) => {
   console.error("Server Error:", err);
   res.status(500).json({ message: "Internal Server Error" });

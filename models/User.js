@@ -138,6 +138,15 @@ const userSchema = new mongoose.Schema(
       commentNotifications: { type: Boolean, default: true },
       shareNotifications: { type: Boolean, default: true },
     },
+
+    // Enrolled courses
+    enrolledCourses: [
+      {
+        courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+        enrolledAt: { type: Date, default: Date.now },
+        lastAccessed: Date,
+      }
+    ],
   },
   {
     timestamps: true, // adds createdAt + updatedAt
