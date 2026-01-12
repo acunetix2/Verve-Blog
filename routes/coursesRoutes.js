@@ -86,7 +86,7 @@ const deleteFromB2 = async (fileId) => {
 // Get all courses
 router.get('/', async (req, res) => {
   try {
-    const courses = await Course.find().select('-modules.lessons.content');
+    const courses = await Course.find().select('-modules.lessons.content -modules.lessons.contentBlocks -modules.lessons.quiz -finalExam');
     res.json(courses);
   } catch (err) {
     console.error('Fetch courses error:', err);
@@ -413,7 +413,7 @@ router.post('/:courseId/certificate/download', authMiddleware, async (req, res) 
 // Admin: Create a new course
 router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, modules } = req.body;
+    const { title, description, modules, finalExam } = req.body;
     
     // Validate required fields
     if (!title) {
@@ -454,12 +454,27 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
       }
     }
 
+    // Parse finalExam if it's a string
+    let parsedFinalExam = null;
+    if (finalExam) {
+      if (typeof finalExam === 'string') {
+        try {
+          parsedFinalExam = JSON.parse(finalExam);
+        } catch (e) {
+          return res.status(400).json({ success: false, message: 'Invalid final exam JSON.' });
+        }
+      } else {
+        parsedFinalExam = finalExam;
+      }
+    }
+
     const course = new Course({
       title,
       description,
       imageUrl,
       imageB2FileId,
       modules: parsedModules,
+      finalExam: parsedFinalExam,
       createdBy: req.user.id,
     });
 
@@ -481,7 +496,7 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
 // Admin: Update a course
 router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, modules } = req.body;
+    const { title, description, modules, finalExam } = req.body;
     const course = await resolveCourse(req.params.id);
 
     if (!course) {
@@ -507,6 +522,22 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
         }
       } else if (Array.isArray(modules) || typeof modules === 'object') {
         course.modules = modules;
+      }
+    }
+
+    // Update finalExam
+    if (finalExam !== undefined) {
+      if (typeof finalExam === 'string') {
+        try {
+          course.finalExam = JSON.parse(finalExam);
+        } catch {
+          return res.status(400).json({ 
+            success: false,
+            message: 'Invalid final exam format.' 
+          });
+        }
+      } else {
+        course.finalExam = finalExam;
       }
     }
 
