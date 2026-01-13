@@ -52,6 +52,7 @@ const CourseSchema = new mongoose.Schema({
   imageB2FileId: { type: String }, // B2 file identifier
   modules: [ModuleSchema],
   finalExam: FinalExamSchema, // Final exam for the course
+  status: { type: String, enum: ['draft', 'published'], default: 'draft' }, // Course status
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }

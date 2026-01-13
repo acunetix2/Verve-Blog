@@ -5,6 +5,10 @@
 export const passwordResetEmail = (resetUrl) => `
   <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto;">
     
+    <div style="text-align: center; margin-bottom: 30px;">
+      <img src="https://vervehub.com/logo.png" alt="Verve Hub Academy" style="max-width: 200px; height: auto;" />
+    </div>
+    
     <h2 style="color: #f97316;">Verve Hub Password Reset</h2>
     
     <p>Hello,</p>
@@ -61,6 +65,7 @@ export const courseCompletionEmail = (userName, courseName, certificateNumber, c
     
     <!-- Header -->
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+      <img src="https://vervehub.com/logo.png" alt="Verve Hub Academy" style="max-width: 180px; height: auto; margin-bottom: 15px;" />
       <h1 style="color: #fff; margin: 0 0 5px 0; font-size: 28px; font-weight: 700;">Verve Academy</h1>
       <h2 style="color: #fff; margin: 0; font-size: 24px; font-weight: 700;">🎉 Congratulations!</h2>
       <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">You've Successfully Completed a Course</p>

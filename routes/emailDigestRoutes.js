@@ -173,6 +173,7 @@ function generateDigestEmail(userName, posts, frequency) {
       <body>
         <div class="container">
           <div class="header">
+            <img src="https://vervehub.com/logo.png" alt="Verve Hub Academy" style="max-width: 180px; height: auto; margin-bottom: 15px;" />
             <h1 style="margin: 0; font-size: 28px;">Your Weekly Digest</h1>
             <p style="margin: 10px 0 0 0; opacity: 0.9;">Top trending posts from this week</p>
           </div>

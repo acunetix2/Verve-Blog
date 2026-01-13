@@ -413,7 +413,7 @@ router.post('/:courseId/certificate/download', authMiddleware, async (req, res) 
 // Admin: Create a new course
 router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, modules, finalExam } = req.body;
+    const { title, description, modules, finalExam, status = 'draft' } = req.body;
     
     // Validate required fields
     if (!title) {
@@ -475,6 +475,7 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
       imageB2FileId,
       modules: parsedModules,
       finalExam: parsedFinalExam,
+      status,
       createdBy: req.user.id,
     });
 
@@ -496,7 +497,7 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
 // Admin: Update a course
 router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, modules, finalExam } = req.body;
+    const { title, description, modules, finalExam, status } = req.body;
     const course = await resolveCourse(req.params.id);
 
     if (!course) {
@@ -509,6 +510,7 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
     // Update basic fields
     if (title) course.title = title;
     if (description) course.description = description;
+    if (status && ['draft', 'published'].includes(status)) course.status = status;
     if (modules) {
       // Accept modules as either a JSON string or an object/array
       if (typeof modules === 'string') {

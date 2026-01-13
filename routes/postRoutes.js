@@ -10,6 +10,9 @@ import { authMiddleware } from "../middleware/auth.js";
 
 const router = express.Router();
 
+// Helper to check if string is MongoDB ObjectId
+const isValidObjectId = (id) => /^[0-9a-f]{24}$/i.test(id);
+
 // ============================
 // GET ALL POSTS WITH PAGINATION & FILTERING
 // ============================
@@ -133,6 +136,171 @@ router.get("/likes", async (req, res) => {
 });
 
 // ============================
+// ID-BASED ROUTES (for authenticated features - MUST come before :slug routes)
+// ============================
+
+// GET comments by POST ID
+router.get(/^\/([0-9a-f]{24})\/comments$/i, async (req, res) => {
+  try {
+    const postId = req.params[0];
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+    res.json(post.comments || []);
+  } catch (err) {
+    console.error("GET COMMENTS ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST new comment by POST ID
+router.post(/^\/([0-9a-f]{24})\/comments$/i, authMiddleware, async (req, res) => {
+  try {
+    const postId = req.params[0];
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const comment = {
+      _id: new Date().getTime().toString(),
+      author: {
+        _id: user._id,
+        name: user.name,
+        profileImage: user.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"
+      },
+      content,
+      likes: 0,
+      isLiked: false,
+      replies: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (!post.comments) post.comments = [];
+    post.comments.push(comment);
+    await post.save();
+
+    res.status(201).json(comment);
+  } catch (err) {
+    console.error("ADD COMMENT ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST reply to comment by POST ID
+router.post(/^\/([0-9a-f]{24})\/comments\/([^/]+)\/replies$/i, authMiddleware, async (req, res) => {
+  try {
+    const postId = req.params[0];
+    const commentId = req.params[1];
+    const { content } = req.body;
+    if (!content) return res.status(400).json({ message: "Content is required" });
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const comment = post.comments?.find(c => c._id?.toString() === commentId);
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
+
+    const reply = {
+      _id: new Date().getTime().toString(),
+      author: {
+        _id: user._id,
+        name: user.name,
+        profileImage: user.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"
+      },
+      content,
+      likes: 0,
+      isLiked: false,
+      replies: [],
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (!comment.replies) comment.replies = [];
+    comment.replies.push(reply);
+    await post.save();
+
+    res.status(201).json(reply);
+  } catch (err) {
+    console.error("ADD REPLY ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET reviews by POST ID
+router.get(/^\/([0-9a-f]{24})\/reviews$/i, async (req, res) => {
+  try {
+    const postId = req.params[0];
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const reviews = post.reviews || [];
+    const averageRating = reviews.length > 0 
+      ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+      : 0;
+
+    res.json({ reviews, averageRating });
+  } catch (err) {
+    console.error("GET REVIEWS ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST new review by POST ID
+router.post(/^\/([0-9a-f]{24})\/reviews$/i, authMiddleware, async (req, res) => {
+  try {
+    const postId = req.params[0];
+    const { rating, comment } = req.body;
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({ message: "Rating must be between 1 and 5" });
+    }
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check if user already reviewed
+    if (post.reviews?.some(r => r.author._id.toString() === req.user.id)) {
+      return res.status(400).json({ message: "You have already reviewed this post" });
+    }
+
+    const review = {
+      _id: new Date().getTime().toString(),
+      author: {
+        _id: user._id,
+        name: user.name,
+        profileImage: user.profileImage || "https://api.dicebear.com/7.x/avataaars/svg?seed=default"
+      },
+      rating,
+      comment,
+      helpful: 0,
+      unhelpful: 0,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+
+    if (!post.reviews) post.reviews = [];
+    post.reviews.push(review);
+    await post.save();
+
+    res.status(201).json(review);
+  } catch (err) {
+    console.error("ADD REVIEW ERROR:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================
 // GET POST BY SLUG
 // ============================
 router.get("/:slug", async (req, res) => {
@@ -240,7 +408,7 @@ router.post("/:slug/view", authMiddleware, async (req, res) => {
 });
 
 // ============================
-// COMMENTS
+// COMMENTS (SLUG-BASED - LEGACY)
 // ============================
 router.get("/:slug/comments", async (req, res) => {
   try {
