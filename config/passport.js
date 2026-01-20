@@ -33,6 +33,7 @@ passport.use(
           user.googleId = profile.id;
           user.avatar = profile.photos[0]?.value;
           user.name = user.name || profile.displayName;
+          user.emailVerified = true; // ✅ Mark email as verified for Google users
           await user.save();
 
           return done(null, user);
@@ -44,6 +45,7 @@ passport.use(
           email,
           name: profile.displayName,
           avatar: profile.photos[0]?.value,
+          emailVerified: true, // ✅ Mark email as verified for new Google users
           role: "user",
         });
 

@@ -22,6 +22,11 @@ const userSchema = new mongoose.Schema(
       select: false, // ❗ important: prevents password from being returned in queries
     },
 
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+
     role: {
       type: String,
       enum: ["admin", "user"],

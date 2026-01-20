@@ -28,10 +28,10 @@ const FinalExamSchema = new mongoose.Schema({
 
 // Resource schema for downloadable materials
 const ResourceSchema = new mongoose.Schema({
-  title: { type: String, required: true },
+  title: { type: String },
   description: String,
-  type: { type: String, enum: ['pdf', 'code', 'checklist', 'template', 'other'], required: true },
-  url: { type: String, required: true }, // B2 URL
+  type: { type: String, enum: ['pdf', 'code', 'checklist', 'template', 'other'] },
+  url: { type: String }, // B2 URL
   fileSize: { type: Number }, // in bytes
   downloadCount: { type: Number, default: 0 },
   createdAt: { type: Date, default: Date.now }
