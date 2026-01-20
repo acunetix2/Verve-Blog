@@ -35,6 +35,13 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    // Avatar from Google OAuth
+    avatar: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     // Profile enhancements
     name: {
       type: String,
@@ -146,6 +153,11 @@ const userSchema = new mongoose.Schema(
         enrolledAt: { type: Date, default: Date.now },
         lastAccessed: Date,
       }
+    ],
+
+    // Bookmarked posts
+    bookmarkedPosts: [
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Post' }
     ],
   },
   {

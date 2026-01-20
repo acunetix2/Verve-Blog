@@ -24,6 +24,9 @@ import userProfileRoutes from "./routes/userProfileRoutes.js";
 import seriesRoutes from "./routes/seriesRoutes.js";
 import schedulingRoutes from "./routes/schedulingRoutes.js";
 import emailDigestRoutes from "./routes/emailDigestRoutes.js";
+import bookmarkRoutes from "./routes/bookmarkRoutes.js";
+import globalSearchRoutes from "./routes/globalSearchRoutes.js";
+import subscriptionRoutes from "./routes/subscriptionRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -116,11 +119,12 @@ app.use("/api/users", usersRoutes);
 app.use("/api/documents", documentsRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/simulations", simulationRoutes);
 app.use("/api/features", featuresRoutes);
 app.use("/api/analytics", featuresRoutes);
-app.use("/api/bookmarks", featuresRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/recommendations", featuresRoutes);
 app.use("/api/engagement", featuresRoutes);
 app.use("/api/users/profile", userProfileRoutes);
@@ -128,6 +132,7 @@ app.use("/api/users", userProfileRoutes);
 app.use("/api/series", seriesRoutes);
 app.use("/api/posts/schedule", schedulingRoutes);
 app.use("/api/digest", emailDigestRoutes);
+app.use("/api/search", globalSearchRoutes);
 
 // ============================================================
 // ERROR HANDLER (AFTER all routes)

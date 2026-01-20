@@ -146,6 +146,12 @@ router.get(
         await req.user.save();
       }
 
+      // Ensure user has avatar and name from Google profile (if not already set)
+      if (!req.user.avatar) {
+        req.user.avatar = req.user.avatar || "";
+        await req.user.save();
+      }
+
       const token = jwt.sign(
         { id: req.user._id, email: req.user.email, role: req.user.role },
         process.env.JWT_SECRET,

@@ -687,4 +687,44 @@ router.post('/:courseId/lessons/:lessonId/upload-content', authMiddleware, admin
   }
 });
 
+// Track resource download
+router.post('/:courseId/lessons/:lessonId/resources/:resourceIndex/download', authMiddleware, async (req, res) => {
+  try {
+    const { courseId, lessonId, resourceIndex } = req.params;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    // Find the lesson
+    let found = false;
+    for (const module of course.modules) {
+      const lesson = module.lessons.find(l => l._id.toString() === lessonId);
+      if (lesson && lesson.resources && lesson.resources[resourceIndex]) {
+        // Increment download count
+        if (!lesson.resources[resourceIndex].downloadCount) {
+          lesson.resources[resourceIndex].downloadCount = 0;
+        }
+        lesson.resources[resourceIndex].downloadCount += 1;
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    await course.save();
+    res.json({ 
+      success: true,
+      message: 'Download tracked' 
+    });
+  } catch (error) {
+    console.error('Download tracking error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
