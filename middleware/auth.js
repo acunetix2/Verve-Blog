@@ -26,7 +26,15 @@ export const authMiddleware = async (req, res, next) => {
     }
 
     const token = tokenParts[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    let decoded;
+    try {
+      decoded = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      if (err.name === "TokenExpiredError") {
+        return res.status(401).json({ success: false, message: "Token expired. Please log in again." });
+      }
+      throw err;
+    }
 
     // Attach decoded token to request
     req.user = decoded; // { id, role }

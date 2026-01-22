@@ -9,7 +9,10 @@ import dotenv from "dotenv";
 import passport from "passport";
 import { Server } from "socket.io";
 import session from "express-session";
-import "./config/passport.js"; 
+import "./config/passport.js";
+import logger from "./config/logger.js";
+import { createMorganMiddleware } from "./utils/morganLogger.js";
+import requestIdMiddleware from "./middleware/requestIdMiddleware.js"; 
 import postRoutes from "./routes/postRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import documentsRoutes from "./routes/documentsRoutes.js";
@@ -35,6 +38,15 @@ const app = express();
 // MIDDLEWARE (MUST be before routes)
 // ============================================================
 
+// Trust proxy (MUST be before session on Render / proxies)
+app.set("trust proxy", 1);
+
+// Request ID middleware (FIRST)
+app.use(requestIdMiddleware);
+
+// HTTP request logging
+app.use(createMorganMiddleware());
+
 // Body parser
 app.use(express.json());
 
@@ -50,9 +62,8 @@ app.use(
     },
   })
 );
-app.set("trust proxy", 1);
 
-// CORS - MUST be before routes
+// CORS
 app.use(
   cors({
     origin: [
@@ -100,14 +111,41 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then(() => console.log("MongoDB connected successfully"))
+  .then(() => {
+    logger.info("MongoDB connected successfully");
+  })
   .catch((err) => {
-    console.error("❌ MongoDB connection error:", err.message);
+    logger.error("MongoDB connection error", {
+      error: err.message,
+      stack: err.stack,
+    });
     process.exit(1);
   });
 
 // ============================================================
-// API ROUTES (AFTER middleware)
+// HEALTH CHECK
+// ============================================================
+app.get("/api/health", (req, res) => {
+  const dbState = mongoose.connection.readyState;
+
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    checks: {
+      api: "ok",
+      database:
+        dbState === 1
+          ? "connected"
+          : dbState === 2
+          ? "connecting"
+          : "disconnected",
+    },
+  });
+});
+
+// ============================================================
+// API ROUTE HANDLERS
 // ============================================================
 app.use("/api/admin", adminRoutes);
 app.use("/api/courses", coursesRoutes);
@@ -135,14 +173,38 @@ app.use("/api/digest", emailDigestRoutes);
 app.use("/api/search", globalSearchRoutes);
 
 // ============================================================
-// ERROR HANDLER (AFTER all routes)
+// ERROR HANDLER (LAST)
 // ============================================================
 app.use((err, req, res, next) => {
-  console.error("Server Error:", err);
-  res.status(500).json({ message: "Internal Server Error" });
+  const statusCode = err.statusCode || 500;
+  const errorId = req.id || "unknown";
+
+  logger.error("Unhandled error", {
+    requestId: errorId,
+    statusCode,
+    message: err.message,
+    stack: err.stack,
+    url: req.url,
+    method: req.method,
+    userId: req.user?.id || "anonymous",
+    ip: req.ip,
+  });
+
+  res.status(statusCode).json({
+    message: "Internal Server Error",
+    errorId,
+    ...(process.env.NODE_ENV === "development" && { error: err.message }),
+  });
 });
 
-// Start server
+// ============================================================
+// START SERVER
+// ============================================================
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server + Socket.IO running on port ${PORT}`));
-
+server.listen(PORT, () => {
+  logger.info(`Server + Socket.IO started`, {
+    port: PORT,
+    environment: process.env.NODE_ENV || "development",
+    timestamp: new Date().toISOString(),
+  });
+});

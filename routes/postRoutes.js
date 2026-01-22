@@ -7,6 +7,8 @@ import Post from "../models/Post.js";
 import User from "../models/User.js";
 import Notification from "../models/Notification.js";
 import { authMiddleware } from "../middleware/auth.js";
+import logger from "../config/logger.js";
+import { logContentActions, logError } from "../utils/auditLogger.js";
 
 const router = express.Router();
 
@@ -80,9 +82,18 @@ router.post("/create", authMiddleware, async (req, res) => {
       message: newPost.title,
     });
 
+    // Log post creation
+    logContentActions.postCreated(newPost._id, author, title);
+    logger.info("Post created successfully", {
+      postId: newPost._id,
+      title,
+      author,
+      slug: normalizedSlug
+    });
+
     res.status(201).json(newPost);
   } catch (err) {
-    console.error("CREATE POST ERROR:", err);
+    logError("CREATE_POST", author, err, { title, category });
     res.status(500).json({ error: err.message });
   }
 });

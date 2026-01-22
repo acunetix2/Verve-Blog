@@ -9,6 +9,8 @@ import dotenv from "dotenv";
 import User from "../models/User.js";
 import passport from "passport";
 import cookieParser from "cookie-parser";
+import logger from "../config/logger.js";
+import { logAuth, logUserActions, logError } from "../utils/auditLogger.js";
 
 dotenv.config();
 const router = express.Router();
@@ -22,17 +24,27 @@ router.post("/signup", async (req, res) => {
     const { email, password, role } = req.body;
 
     const existingUser = await User.findOne({ email });
-    if (existingUser)
+    if (existingUser) {
+      logAuth.loginFailed(email, "Email already exists");
       return res.status(400).json({ message: "Email already exists" });
+    }
 
     const user = await User.create({ email, password, role });
+    
+    // Log user creation
+    logUserActions.userCreated(user._id, "self-registration");
+    logger.info("User registered successfully", {
+      userId: user._id,
+      email: user.email,
+      role: user.role
+    });
 
     res.status(201).json({
       message: "User created successfully",
       user: { id: user._id, email: user.email, role: user.role },
     });
   } catch (error) {
-    console.error("Registration error:", error);
+    logError("User registration failed", "unknown", error, { email: req.body?.email });
     res.status(400).json({ message: error.message });
   }
 });
@@ -45,18 +57,30 @@ router.post("/login", async (req, res) => {
 
   try {
     const user = await User.findOne({ email });
-    if (!user)
+    if (!user) {
+      logAuth.loginFailed(email, "User not found");
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     const isMatch = await user.matchPassword(password);
-    if (!isMatch)
+    if (!isMatch) {
+      logAuth.loginFailed(email, "Invalid password");
       return res.status(401).json({ message: "Invalid email or password" });
+    }
 
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: "2h" }
     );
+
+    // Log successful login
+    logAuth.login(user._id, 'email', true);
+    logger.info("User login successful", {
+      userId: user._id,
+      email: user.email,
+      requestId: req.id
+    });
 
     res.json({
       message: "Login successful",
@@ -71,7 +95,7 @@ router.post("/login", async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Login error:", error);
+    logError("Login failed", email, error);
     res.status(500).json({ message: "Server error" });
   }
 });

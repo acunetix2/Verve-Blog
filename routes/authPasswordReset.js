@@ -9,15 +9,21 @@ import User from "../models/User.js";
 import PasswordResetToken from "../models/PasswordResetToken.js";
 import { passwordResetEmail } from "../utils/emailTemplates.js";
 import sgMail from "@sendgrid/mail";
+import logger from "../config/logger.js";
 
 const router = express.Router();
 
-// Set SendGrid API key
+// Validate and set SendGrid API key
 if (!process.env.SENDGRID_API_KEY) {
-  console.error("SENDGRID_API_KEY is not set!");
-  process.exit(1); // Prevent app from starting
+  console.error("❌ SENDGRID_API_KEY is not set in environment variables!");
+  console.error("   Password reset emails will not be sent until configured.");
+} else if (!process.env.SENDGRID_API_KEY.startsWith("SG.")) {
+  console.error("❌ SENDGRID_API_KEY must start with 'SG.' - current value appears invalid");
+  console.error("   Password reset emails will not be sent until corrected.");
+} else {
+  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+  console.log("✓ SendGrid API configured for password reset emails");
 }
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 // Fallback sender email
 const MAIL_FROM = process.env.MAIL_FROM || "vervehubwriteups@gmail.com";
@@ -64,8 +70,16 @@ router.post("/forgot-password", async (req, res) => {
       console.log(`Password reset email sent to ${email}`);
       res.json({ message: "Password reset link sent to email" });
     } catch (emailError) {
-      console.error("SendGrid email error:", emailError);
-      res.status(500).json({ message: "Failed to send email" });
+      console.error("SendGrid email error:", emailError.message);
+      // Still return success to user for security (don't reveal if email exists)
+      // But log the error for debugging
+      logger.error("Failed to send password reset email", { 
+        email, 
+        error: emailError.message 
+      });
+      res.status(500).json({ 
+        message: "Failed to send email. Please try again later or contact support." 
+      });
     }
   } catch (error) {
     console.error("Forgot password error:", error);
