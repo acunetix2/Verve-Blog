@@ -50,6 +50,55 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 
 /* -----------------------------------------------------
+   PUT - Mark a notification as read by ID
+----------------------------------------------------- */
+router.put("/:id/read", authMiddleware, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ObjectId format
+    if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ error: "Invalid notification ID format" });
+    }
+
+    const updated = await Notification.findByIdAndUpdate(
+      id,
+      { read: true },
+      { new: true }
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    return res.status(200).json(updated);
+  } catch (error) {
+    console.error("PUT /notifications/:id/read error:", error);
+    return res.status(500).json({ error: "Failed to mark notification as read" });
+  }
+});
+
+/* -----------------------------------------------------
+   PUT - Mark all notifications as read
+----------------------------------------------------- */
+router.put("/mark-all-read", authMiddleware, async (req, res) => {
+  try {
+    const result = await Notification.updateMany(
+      { read: false },
+      { read: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      modifiedCount: result.modifiedCount,
+    });
+  } catch (error) {
+    console.error("PUT /notifications/mark-all-read error:", error);
+    return res.status(500).json({ error: "Failed to mark all notifications as read" });
+  }
+});
+
+/* -----------------------------------------------------
    DELETE a notification by ID
 ----------------------------------------------------- */
 router.delete("/:id", authMiddleware, async (req, res) => {
@@ -71,6 +120,23 @@ router.delete("/:id", authMiddleware, async (req, res) => {
   } catch (error) {
     console.error("DELETE /notifications/:id error:", error);
     return res.status(500).json({ error: "Failed to delete notification" });
+  }
+});
+
+/* -----------------------------------------------------
+   DELETE all notifications
+----------------------------------------------------- */
+router.delete("/", authMiddleware, async (req, res) => {
+  try {
+    const result = await Notification.deleteMany({});
+
+    return res.status(200).json({
+      success: true,
+      deletedCount: result.deletedCount,
+    });
+  } catch (error) {
+    console.error("DELETE /notifications error:", error);
+    return res.status(500).json({ error: "Failed to delete all notifications" });
   }
 });
 
