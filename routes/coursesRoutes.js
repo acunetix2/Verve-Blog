@@ -83,10 +83,10 @@ const deleteFromB2 = async (fileId) => {
 // PUBLIC ROUTES
 // ============================================================
 
-// Get all courses
+// Get all courses (public - only published)
 router.get('/', async (req, res) => {
   try {
-    const courses = await Course.find().select('-modules.lessons.content -modules.lessons.contentBlocks -modules.lessons.quiz -finalExam');
+    const courses = await Course.find({ status: 'published' }).select('-modules.lessons.content -modules.lessons.contentBlocks -modules.lessons.quiz -finalExam');
     res.json(courses);
   } catch (err) {
     console.error('Fetch courses error:', err);
@@ -513,9 +513,10 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
     if (status && ['draft', 'published'].includes(status)) course.status = status;
     if (modules) {
       // Accept modules as either a JSON string or an object/array
+      let parsedModules;
       if (typeof modules === 'string') {
         try {
-          course.modules = JSON.parse(modules);
+          parsedModules = JSON.parse(modules);
         } catch {
           return res.status(400).json({ 
             success: false,
@@ -523,7 +524,37 @@ router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), asyn
           });
         }
       } else if (Array.isArray(modules) || typeof modules === 'object') {
-        course.modules = modules;
+        parsedModules = modules;
+      }
+      
+      if (parsedModules) {
+        // Merge with existing modules data to preserve fields not in the update
+        course.modules = parsedModules.map((newModule, moduleIdx) => {
+          const existingModule = course.modules[moduleIdx];
+          if (!existingModule) {
+            // New module, return as-is
+            return newModule;
+          }
+          // Merge new module data with existing to preserve missing fields
+          const mergedModule = {
+            ...existingModule.toObject ? existingModule.toObject() : existingModule,
+            ...newModule,
+            title: newModule.title || existingModule.title,
+            lessons: (newModule.lessons || []).map((newLesson, lessonIdx) => {
+              const existingLesson = existingModule.lessons && existingModule.lessons[lessonIdx];
+              if (!existingLesson) {
+                return newLesson;
+              }
+              // Merge lesson data preserving all required fields
+              return {
+                ...existingLesson.toObject ? existingLesson.toObject() : existingLesson,
+                ...newLesson,
+                title: newLesson.title || existingLesson.title
+              };
+            })
+          };
+          return mergedModule;
+        });
       }
     }
 
