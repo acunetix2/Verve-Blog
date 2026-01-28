@@ -57,8 +57,21 @@ router.post("/", upload.single("file"), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-    const { title, description, category } = req.body;
+    // ✅ Accept both 'categories' (array) and 'category' (legacy string) 
+    const { title, description, categories, category } = req.body;
     const uploadedFile = await uploadToB2(req.file);
+
+    // Process categories - support both new array format and legacy single category
+    let categoriesArray = [];
+    if (categories && Array.isArray(categories)) {
+      categoriesArray = categories.filter((cat) => cat && cat.trim());
+    } else if (category && typeof category === "string") {
+      categoriesArray = [category.trim()];
+    }
+    
+    if (categoriesArray.length === 0) {
+      categoriesArray = ["Uncategorized"];
+    }
 
     const newDocument = new Document({
       title,
@@ -66,7 +79,9 @@ router.post("/", upload.single("file"), async (req, res) => {
       fileName: uploadedFile.fileName,
       fileType: req.file.mimetype,
       b2FileId: uploadedFile.fileName,
-      category: category || "Uncategorized",
+      // ✅ Save both for compatibility
+      categories: categoriesArray,
+      category: categoriesArray[0],
     });
 
     await newDocument.save();

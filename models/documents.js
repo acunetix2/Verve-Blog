@@ -10,7 +10,10 @@ const documentSchema = new mongoose.Schema({
   fileName: { type: String, required: true },
   fileType: { type: String, required: true },
   b2FileId: { type: String, required: true }, 
-  category: { type: String, default: "Uncategorized" }, 
+  // ✅ Changed from single string to array of tech categories
+  categories: { type: [String], default: ["Uncategorized"] },
+  // Keep legacy category field for backwards compatibility
+  category: { type: String, default: "Uncategorized" },
   uploadedAt: { type: Date, default: Date.now },
 });
 

@@ -45,7 +45,7 @@ router.get("/", async (req, res) => {
 router.post("/create", authMiddleware, async (req, res) => {
   const io = req.app.get("io");
   try {
-    const { title, content, slug, tags, category } = req.body;
+    const { title, content, slug, tags, categories, category } = req.body;
     const author = req.user.id;
 
     if (!title || !content || !slug) {
@@ -56,13 +56,27 @@ router.post("/create", authMiddleware, async (req, res) => {
     const existingPost = await Post.findOne({ slug: normalizedSlug });
     if (existingPost) return res.status(400).json({ message: "Slug already exists" });
 
+    // ✅ Process categories - support both new array format and legacy single category
+    let categoriesArray = [];
+    if (categories && Array.isArray(categories)) {
+      categoriesArray = categories.filter((cat) => cat && cat.trim());
+    } else if (category && typeof category === "string") {
+      categoriesArray = [category.trim()];
+    }
+    
+    if (categoriesArray.length === 0) {
+      categoriesArray = ["Uncategorized"];
+    }
+
     const newPost = new Post({
       title,
       content,
       author,
       slug: normalizedSlug,
       tags: tags || [],
-      category: category || "Uncategorized",
+      // ✅ Save both for compatibility
+      categories: categoriesArray,
+      category: categoriesArray[0],
       likes: 0,
       views: 0,
       comments: [],
@@ -93,7 +107,7 @@ router.post("/create", authMiddleware, async (req, res) => {
 
     res.status(201).json(newPost);
   } catch (err) {
-    logError("CREATE_POST", author, err, { title, category });
+    logError("CREATE_POST", author, err, { title, categories: categories || category });
     res.status(500).json({ error: err.message });
   }
 });

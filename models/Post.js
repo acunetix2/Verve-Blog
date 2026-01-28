@@ -17,7 +17,9 @@ const postSchema = new mongoose.Schema(
     featured: { type: Boolean, default: false },
     slug: { type: String, unique: true },
 
-    // ✅ New field
+    // ✅ Changed from single string to array of tech categories
+    categories: { type: [String], default: ["Uncategorized"] },
+    // Keep legacy category field for backwards compatibility
     category: { type: String, default: "Uncategorized" },
 
     likes: { type: Number, default: 0 },
