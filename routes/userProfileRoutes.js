@@ -106,20 +106,32 @@ router.get("/profile", auth, async (req, res) => {
 
     const response = {
       _id: user._id,
-      name: user.name || user.email.split("@")[0],
+      username: user.name || user.email.split("@")[0],
+      firstName: user.firstName || "",
+      lastName: user.lastName || "",
       email: user.email,
-      bio: user.bio || "No bio yet",
+      bio: user.bio || "",
+      avatar: user.avatar || user.profileImage || "",
+      phoneNumber: user.phoneNumber || "",
       location: user.location || "",
+      professionalTitle: user.professionalTitle || "",
+      company: user.company || "",
       website: user.website || "",
-      github: user.github || "",
-      linkedin: user.linkedin || "",
-      twitter: user.twitter || "",
-      profileImage: user.profileImage || "",
-      joinDate: user.createdAt,
-      totalPosts: userPosts.length,
-      totalViews,
-      totalLikes,
+      socialLinks: {
+        linkedin: user.socialLinks?.linkedin || "",
+        twitter: user.socialLinks?.twitter || "",
+        github: user.socialLinks?.github || "",
+      },
       badges: [...(user.badges || []), ...badges],
+      enrolledCourses: user.enrolledCourses || [],
+      completedCourses: user.completedCourses || [],
+      twoFactorEnabled: user.twoFactorEnabled || false,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin || null,
+      totalLearningMinutes: user.totalLearningMinutes || 0,
+      currentStreak: user.currentStreak || 0,
+      maxStreak: user.maxStreak || 0,
+      lastActivityDate: user.lastActivityDate || null,
       achievements,
       stats: {
         postsPublished: userPosts.length,
@@ -139,24 +151,38 @@ router.get("/profile", auth, async (req, res) => {
 // Update user profile
 router.put("/profile", auth, async (req, res) => {
   try {
-    const { name, bio, location, website, github, linkedin, twitter, profileImage } = req.body;
+    const { firstName, lastName, email, bio, location, website, phoneNumber, professionalTitle, company, socialLinks, avatar, profileImage } = req.body;
+
+    const updateData = {};
+    
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (email !== undefined) updateData.email = email;
+    if (bio !== undefined) updateData.bio = bio;
+    if (location !== undefined) updateData.location = location;
+    if (website !== undefined) updateData.website = website;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (professionalTitle !== undefined) updateData.professionalTitle = professionalTitle;
+    if (company !== undefined) updateData.company = company;
+    if (avatar !== undefined) updateData.avatar = avatar;
+    if (profileImage !== undefined) updateData.profileImage = profileImage;
+    
+    // Handle social links
+    if (socialLinks !== undefined) {
+      updateData.socialLinks = {
+        linkedin: socialLinks.linkedin || "",
+        twitter: socialLinks.twitter || "",
+        github: socialLinks.github || "",
+      };
+    }
 
     const user = await User.findByIdAndUpdate(
       req.userId,
-      {
-        name,
-        bio,
-        location,
-        website,
-        github,
-        linkedin,
-        twitter,
-        profileImage,
-      },
+      updateData,
       { new: true }
     ).select("-password");
 
-    res.json(user);
+    res.json({ user });
   } catch (error) {
     console.error("Update profile error:", error);
     res.status(500).json({ message: "Failed to update profile" });

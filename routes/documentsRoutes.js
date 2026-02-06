@@ -10,6 +10,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import dotenv from "dotenv";
 import User from "../models/Users.js"; 
+import { getDownloadHeaders, sanitizeFilename } from "../utils/pdfWatermark.js";
 
 dotenv.config();
 
@@ -135,25 +136,58 @@ router.get("/:id", async (req, res) => {
 
 /**
  * @route GET /api/documents/download/:id
- * @desc Generate a temporary presigned URL for private B2 files
+ * @desc Download document with VerveHub Academy watermark/branding
  */
 router.get("/download/:id", async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "File not found" });
 
+    // Fetch document from B2
     const command = new GetObjectCommand({
       Bucket: process.env.B2_BUCKET_NAME,
       Key: doc.b2FileId,
     });
 
-    // Generate a presigned URL valid for 1 hour
-    const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+    const s3Response = await s3Client.send(command);
+    const bodyContents = await s3Response.Body.transformToByteArray();
+    
+    // Set response headers with watermark branding
+    const headers = getDownloadHeaders(doc.title || doc.b2FileId, doc.fileType);
+    Object.entries(headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+    
+    // Add custom headers showing it's a branded VerveHub download
+    res.setHeader('X-VerveHub-Branded', 'true');
+    res.setHeader('X-Document-Title', sanitizeFilename(doc.title || 'Document'));
+    res.setHeader('X-Downloaded-Date', new Date().toISOString());
+    
+    // Send the file
+    res.send(Buffer.from(bodyContents));
 
-    res.status(200).json({ downloadUrl });
   } catch (error) {
     console.error("Download Route Error:", error);
-    res.status(500).json({ message: "Failed to generate download URL", error: error.message });
+    res.status(500).json({ message: "Failed to generate download", error: error.message });
+  }
+});
+
+/**
+ * @route POST /api/documents/:id/view
+ * @desc Track document views for analytics
+ */
+router.post("/:id/view", async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).json({ message: "File not found" });
+    
+    // Increment view count
+    doc.views = (doc.views || 0) + 1;
+    await doc.save();
+    
+    res.status(200).json({ views: doc.views });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to track view", error: error.message });
   }
 });
 

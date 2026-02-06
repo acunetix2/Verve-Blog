@@ -56,10 +56,77 @@ const userSchema = new mongoose.Schema(
       default: "", // optional default
     },
 
+    firstName: {
+      type: String,
+      default: "",
+    },
+
+    lastName: {
+      type: String,
+      default: "",
+    },
+
     profileImage: {
       type: String,
       default: "",
     },
+
+    avatar: {
+      type: String,
+      default: "",
+    },
+
+    bio: {
+      type: String,
+      default: "",
+    },
+
+    phoneNumber: {
+      type: String,
+      default: "",
+    },
+
+    location: {
+      type: String,
+      default: "",
+    },
+
+    professionalTitle: {
+      type: String,
+      default: "",
+    },
+
+    company: {
+      type: String,
+      default: "",
+    },
+
+    socialLinks: {
+      linkedin: { type: String, default: "" },
+      twitter: { type: String, default: "" },
+      github: { type: String, default: "" },
+    },
+
+    // -------- COURSE LEARNING TRACKING --------
+    enrolledCourses: [
+      {
+        courseId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+        enrolledAt: { type: Date, default: Date.now },
+        lastAccessed: Date,
+      }
+    ],
+
+    completedCourses: [
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Course' }
+    ],
+
+    totalLearningMinutes: { type: Number, default: 0 },
+    currentStreak: { type: Number, default: 0 },
+    maxStreak: { type: Number, default: 0 },
+    lastActivityDate: { type: Date, default: null },
+    twoFactorEnabled: { type: Boolean, default: false },
+    lastLogin: { type: Date, default: null },
+
 	// -------- EMAIL VERIFICATION --------
 	emailVerified: {
 	  type: Boolean,

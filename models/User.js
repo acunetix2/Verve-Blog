@@ -53,6 +53,16 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    firstName: {
+      type: String,
+      default: "",
+    },
+
+    lastName: {
+      type: String,
+      default: "",
+    },
+
     bio: {
       type: String,
       default: "",
@@ -69,6 +79,28 @@ const userSchema = new mongoose.Schema(
       default: "",
     },
 
+    phoneNumber: {
+      type: String,
+      default: "",
+    },
+
+    professionalTitle: {
+      type: String,
+      default: "",
+    },
+
+    company: {
+      type: String,
+      default: "",
+    },
+
+    socialLinks: {
+      linkedin: { type: String, default: "" },
+      twitter: { type: String, default: "" },
+      github: { type: String, default: "" },
+    },
+
+    // Legacy social fields (kept for backward compatibility)
     github: {
       type: String,
       default: "",
@@ -159,6 +191,21 @@ const userSchema = new mongoose.Schema(
         lastAccessed: Date,
       }
     ],
+
+    // Completed courses
+    completedCourses: [
+      { type: mongoose.Schema.Types.ObjectId, ref: 'Course' }
+    ],
+
+    // Course learning tracking
+    totalLearningMinutes: { type: Number, default: 0 },
+    currentStreak: { type: Number, default: 0 },
+    maxStreak: { type: Number, default: 0 },
+    lastActivityDate: { type: Date, default: null },
+
+    // Two-factor authentication
+    twoFactorEnabled: { type: Boolean, default: false },
+    lastLogin: { type: Date, default: null },
 
     // Bookmarked posts
     bookmarkedPosts: [

@@ -30,6 +30,10 @@ import emailDigestRoutes from "./routes/emailDigestRoutes.js";
 import bookmarkRoutes from "./routes/bookmarkRoutes.js";
 import globalSearchRoutes from "./routes/globalSearchRoutes.js";
 import subscriptionRoutes from "./routes/subscriptionRoutes.js";
+import commentRoutes from "./routes/commentRoutes.js";
+import reviewsAndBadgesRoutes from "./routes/reviewsAndBadgesRoutes.js";
+import wishlistRoutes from "./routes/wishlistRoutes.js";
+import emailNotificationRoutes from "./routes/emailNotificationRoutes.js";
 
 dotenv.config();
 const app = express();
@@ -171,6 +175,14 @@ app.use("/api/series", seriesRoutes);
 app.use("/api/posts/schedule", schedulingRoutes);
 app.use("/api/digest", emailDigestRoutes);
 app.use("/api/search", globalSearchRoutes);
+app.use("/api/comments", commentRoutes);
+app.use("/api/reviews", reviewsAndBadgesRoutes);
+app.use("/api/badges", reviewsAndBadgesRoutes);
+app.use("/api/recommendations", reviewsAndBadgesRoutes);
+app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/analytics", wishlistRoutes);
+app.use("/api/profile", wishlistRoutes);
+app.use("/api/email-notifications", emailNotificationRoutes);
 
 // ============================================================
 // ERROR HANDLER (LAST)

@@ -497,7 +497,29 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
 // Admin: Update a course
 router.put('/:id', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, modules, finalExam, status } = req.body;
+    const { title, description, status } = req.body;
+    let modules = req.body.modules;
+    let finalExam = req.body.finalExam;
+    
+    // Parse modules if it's a JSON string (from FormData)
+    if (typeof modules === 'string') {
+      try {
+        modules = JSON.parse(modules);
+      } catch (e) {
+        console.error('Invalid modules JSON:', e);
+        return res.status(400).json({ success: false, message: 'Invalid modules JSON.' });
+      }
+    }
+    
+    // Parse finalExam if it's a JSON string
+    if (typeof finalExam === 'string') {
+      try {
+        finalExam = JSON.parse(finalExam);
+      } catch (e) {
+        console.error('Invalid finalExam JSON:', e);
+      }
+    }
+    
     const course = await resolveCourse(req.params.id);
 
     if (!course) {
@@ -755,6 +777,263 @@ router.post('/:courseId/lessons/:lessonId/resources/:resourceIndex/download', au
   } catch (error) {
     console.error('Download tracking error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================
+// QUIZ SUBMISSION ENDPOINTS
+// ============================================================
+
+// Submit lesson quiz
+router.post('/:courseId/lessons/:lessonId/quiz/submit', authMiddleware, async (req, res) => {
+  try {
+    const { courseId: courseParam, lessonId } = req.params;
+    const { answers } = req.body; // answers = { 0: 'option1', 1: 'option2', ... }
+    const userId = req.user.id;
+
+    if (!answers || typeof answers !== 'object') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Quiz answers required in correct format' 
+      });
+    }
+
+    const course = await resolveCourse(courseParam);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    // Find the lesson
+    let lesson = null;
+    for (const module of course.modules) {
+      const found = module.lessons.find(l => l._id.toString() === lessonId);
+      if (found) {
+        lesson = found;
+        break;
+      }
+    }
+
+    if (!lesson || !lesson.quiz || lesson.quiz.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Quiz not found for this lesson' 
+      });
+    }
+
+    // Calculate score
+    let correctCount = 0;
+    const detailedResults = lesson.quiz.map((question, idx) => {
+      const userAnswer = answers[idx];
+      const isCorrect = userAnswer === question.correctAnswer;
+      if (isCorrect) correctCount++;
+      return {
+        question: question.question,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        userAnswer: userAnswer || null,
+        isCorrect,
+        explanation: question.explanation
+      };
+    });
+
+    const score = Math.round((correctCount / lesson.quiz.length) * 100);
+
+    // Record the quiz attempt
+    const progress = await UserProgress.findOne({ userId, courseId: course._id });
+    if (progress) {
+      const existingIdx = progress.completedLessons.findIndex(l => l.lessonId.toString() === lessonId);
+      if (existingIdx >= 0) {
+        // Update with better score
+        if (score > (progress.completedLessons[existingIdx].quizScore || 0)) {
+          progress.completedLessons[existingIdx].quizScore = score;
+        }
+      } else {
+        progress.completedLessons.push({
+          lessonId,
+          completedAt: new Date(),
+          quizScore: score
+        });
+      }
+      await progress.save();
+    }
+
+    res.json({
+      success: true,
+      message: 'Quiz submitted successfully',
+      score,
+      correctCount,
+      totalQuestions: lesson.quiz.length,
+      detailedResults,
+      passed: score >= 70 // Default passing score 70%
+    });
+  } catch (error) {
+    console.error('Quiz submission error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to submit quiz' 
+    });
+  }
+});
+
+// ============================================================
+// FINAL EXAM SUBMISSION ENDPOINTS
+// ============================================================
+
+// Submit final exam
+router.post('/:courseId/exam/submit', authMiddleware, async (req, res) => {
+  try {
+    const { courseId: courseParam } = req.params;
+    const { answers } = req.body; // answers = { 0: 'option1', 1: 'option2', ... }
+    const userId = req.user.id;
+
+    if (!answers || typeof answers !== 'object') {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Exam answers required in correct format' 
+      });
+    }
+
+    const course = await resolveCourse(courseParam);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const exam = course.finalExam;
+    if (!exam || !exam.isEnabled) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Final exam is not enabled for this course' 
+      });
+    }
+
+    if (!exam.questions || exam.questions.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No exam questions found' 
+      });
+    }
+
+    // Calculate score
+    let correctCount = 0;
+    const detailedResults = exam.questions.map((question, idx) => {
+      const userAnswer = answers[idx];
+      const isCorrect = userAnswer === question.correctAnswer;
+      if (isCorrect) correctCount++;
+      return {
+        question: question.question,
+        options: question.options,
+        correctAnswer: question.correctAnswer,
+        userAnswer: userAnswer || null,
+        isCorrect,
+        explanation: question.explanation
+      };
+    });
+
+    const score = Math.round((correctCount / exam.questions.length) * 100);
+    const passed = score >= (exam.passingScore || 70);
+
+    // Record the exam attempt
+    const progress = await UserProgress.findOne({ userId, courseId: course._id });
+    if (progress) {
+      if (!progress.examAttempts) progress.examAttempts = [];
+      progress.examAttempts.push({
+        score,
+        attemptDate: new Date(),
+        passed
+      });
+      progress.finalExamScore = score;
+      progress.finalExamPassed = passed;
+      await progress.save();
+    }
+
+    // If passed, generate certificate
+    let certificate = null;
+    if (passed) {
+      const existingCert = await Certificate.findOne({ userId, courseId: course._id });
+      if (!existingCert) {
+        const certificateNumber = `VA-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+        certificate = new Certificate({
+          userId,
+          courseId: course._id,
+          courseTitle: course.title,
+          userName: req.user.name || 'Learner',
+          certificateNumber,
+          completionDate: new Date(),
+          totalQuizScore: score
+        });
+        await certificate.save();
+
+        // Send certificate email
+        const user = await User.findById(userId);
+        if (user && user.email) {
+          const { courseCompletionEmail } = await import("../utils/emailTemplates.js");
+          try {
+            await sendEmail(
+              user.email,
+              'Certificate Earned! 🎓',
+              courseCompletionEmail(user.name, course.title, certificateNumber)
+            );
+          } catch (emailError) {
+            console.error('Failed to send certificate email:', emailError);
+          }
+        }
+      } else {
+        certificate = existingCert;
+      }
+    }
+
+    res.json({
+      success: true,
+      message: passed ? 'Exam passed! Certificate earned!' : 'Exam submitted',
+      score,
+      correctCount,
+      totalQuestions: exam.questions.length,
+      passingScore: exam.passingScore || 70,
+      passed,
+      detailedResults,
+      certificate: passed ? certificate : null
+    });
+  } catch (error) {
+    console.error('Exam submission error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to submit exam' 
+    });
+  }
+});
+
+// Get exam attempt history
+router.get('/:courseId/exam/attempts', authMiddleware, async (req, res) => {
+  try {
+    const { courseId: courseParam } = req.params;
+    const userId = req.user.id;
+
+    const course = await resolveCourse(courseParam);
+    if (!course) {
+      return res.status(404).json({ success: false, message: 'Course not found' });
+    }
+
+    const progress = await UserProgress.findOne({ userId, courseId: course._id });
+    if (!progress) {
+      return res.json({
+        success: true,
+        attempts: [],
+        message: 'No exam attempts yet'
+      });
+    }
+
+    res.json({
+      success: true,
+      attempts: progress.examAttempts || [],
+      bestScore: Math.max(...(progress.examAttempts || []).map(a => a.score || 0), 0),
+      passed: progress.finalExamPassed || false
+    });
+  } catch (error) {
+    console.error('Get exam attempts error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch exam attempts' 
+    });
   }
 });
 

@@ -475,8 +475,29 @@ router.get("/dashboard-stats", authMiddleware, async (req, res) => {
 // ------------------ UPDATE PROFILE ------------------
 router.put("/me", authMiddleware, upload.single("profileImage"), async (req, res) => {
   try {
-    const { name, email } = req.body;
-    const updateData = { name, email };
+    const { name, firstName, lastName, email, bio, phoneNumber, location, professionalTitle, company, avatar, socialLinks } = req.body;
+    const updateData = {};
+
+    // Update profile fields
+    if (name !== undefined) updateData.name = name;
+    if (firstName !== undefined) updateData.firstName = firstName;
+    if (lastName !== undefined) updateData.lastName = lastName;
+    if (email !== undefined) updateData.email = email;
+    if (bio !== undefined) updateData.bio = bio;
+    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+    if (location !== undefined) updateData.location = location;
+    if (professionalTitle !== undefined) updateData.professionalTitle = professionalTitle;
+    if (company !== undefined) updateData.company = company;
+    if (avatar !== undefined) updateData.avatar = avatar;
+    
+    // Handle social links
+    if (socialLinks !== undefined) {
+      updateData.socialLinks = {
+        linkedin: socialLinks.linkedin || "",
+        twitter: socialLinks.twitter || "",
+        github: socialLinks.github || "",
+      };
+    }
 
     // If avatar file exists, upload to Cloudinary
     if (req.file) {
@@ -491,7 +512,8 @@ router.put("/me", authMiddleware, upload.single("profileImage"), async (req, res
         stream.end(req.file.buffer);
       });
 
-      updateData.profileImage = uploaded.secure_url; 
+      updateData.profileImage = uploaded.secure_url;
+      updateData.avatar = uploaded.secure_url;
     }
 
     const updatedUser = await Users.findByIdAndUpdate(
@@ -500,10 +522,10 @@ router.put("/me", authMiddleware, upload.single("profileImage"), async (req, res
       { new: true }
     ).select("-password");
 
-    res.json(updatedUser);
+    res.json({ success: true, user: updatedUser });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: "Profile update failed" });
+    res.status(500).json({ success: false, message: "Profile update failed" });
   }
 });
 

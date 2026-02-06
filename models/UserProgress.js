@@ -8,6 +8,14 @@ const UserProgressSchema = new mongoose.Schema({
     completedAt: Date,
     quizScore: Number
   }],
+  // Final exam tracking
+  examAttempts: [{
+    score: Number,
+    attemptDate: Date,
+    passed: Boolean
+  }],
+  finalExamScore: { type: Number, default: 0 },
+  finalExamPassed: { type: Boolean, default: false },
   enrolledAt: { type: Date, default: Date.now },
   lastAccessed: { type: Date, default: Date.now }
 });
