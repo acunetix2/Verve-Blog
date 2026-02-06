@@ -12,7 +12,7 @@
  */
 export function getWatermarkFooter(documentTitle = 'Document') {
   const downloadDate = new Date().toLocaleString();
-  return `\n\n${'='.repeat(60)}\nVerveHub Academy - ${documentTitle}\nDownloaded: ${downloadDate}\n© VerveHub Academy - All Rights Reserved\nWebsite: https://vervehub.com\n${'='.repeat(60)}`;
+  return `\n\n${'='.repeat(60)}\nVerve Hub Academy - ${documentTitle}\nDownloaded: ${downloadDate}\n© VerveHub Academy - All Rights Reserved\nWebsite: https://vervehub.com\n${'='.repeat(60)}`;
 }
 
 /**
@@ -20,7 +20,7 @@ export function getWatermarkFooter(documentTitle = 'Document') {
  * @returns {string} - Header text with branding
  */
 export function getWatermarkHeader() {
-  return `${'='.repeat(60)}\nVERVEHUB ACADEMY\n${new Date().toLocaleString()}\n${'='.repeat(60)}\n\n`;
+  return `${'='.repeat(60)}\nVERVE HUB ACADEMY\n${new Date().toLocaleString()}\n${'='.repeat(60)}\n\n`;
 }
 
 /**
@@ -70,7 +70,7 @@ export function createBrandedCoverPage(documentTitle, description = '') {
   const date = new Date().toLocaleString();
   return `
 ${'█'.repeat(60)}
-VERVEHUB ACADEMY
+VERVE HUB ACADEMY
 Official Learning Resource
 ${'█'.repeat(60)}
 

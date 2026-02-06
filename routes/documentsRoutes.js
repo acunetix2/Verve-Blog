@@ -136,39 +136,30 @@ router.get("/:id", async (req, res) => {
 
 /**
  * @route GET /api/documents/download/:id
- * @desc Download document with VerveHub Academy watermark/branding
+ * @desc Generate signed URL for document download from B2
  */
 router.get("/download/:id", async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "File not found" });
 
-    // Fetch document from B2
+    // Generate signed URL for B2 file (valid for 1 hour)
     const command = new GetObjectCommand({
       Bucket: process.env.B2_BUCKET_NAME,
       Key: doc.b2FileId,
     });
 
-    const s3Response = await s3Client.send(command);
-    const bodyContents = await s3Response.Body.transformToByteArray();
+    const downloadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     
-    // Set response headers with watermark branding
-    const headers = getDownloadHeaders(doc.title || doc.b2FileId, doc.fileType);
-    Object.entries(headers).forEach(([key, value]) => {
-      res.setHeader(key, value);
+    res.status(200).json({ 
+      downloadUrl,
+      fileName: doc.title || doc.b2FileId,
+      fileType: doc.fileType
     });
-    
-    // Add custom headers showing it's a branded VerveHub download
-    res.setHeader('X-VerveHub-Branded', 'true');
-    res.setHeader('X-Document-Title', sanitizeFilename(doc.title || 'Document'));
-    res.setHeader('X-Downloaded-Date', new Date().toISOString());
-    
-    // Send the file
-    res.send(Buffer.from(bodyContents));
 
   } catch (error) {
     console.error("Download Route Error:", error);
-    res.status(500).json({ message: "Failed to generate download", error: error.message });
+    res.status(500).json({ message: "Failed to generate download URL", error: error.message });
   }
 });
 

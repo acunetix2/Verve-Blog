@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import Course from "../models/Course.js";
 import mongoose from 'mongoose';
 import UserProgress from "../models/UserProgress.js";
@@ -113,6 +114,39 @@ router.get('/:id', async (req, res) => {
     res.status(500).json({ 
       success: false,
       message: 'Unable to fetch course. Please try again later.' 
+    });
+  }
+});
+
+// Get signed URL for course image
+router.get('/:id/image/url', async (req, res) => {
+  try {
+    const course = await resolveCourse(req.params.id);
+    if (!course || !course.imageB2FileId) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'Course or image not found.' 
+      });
+    }
+
+    // Generate signed URL for course image (valid for 24 hours)
+    const command = new GetObjectCommand({
+      Bucket: process.env.B2_BUCKET_NAME,
+      Key: course.imageB2FileId,
+    });
+
+    const imageUrl = await getSignedUrl(s3Client, command, { expiresIn: 86400 });
+    
+    res.json({ 
+      success: true,
+      imageUrl,
+      fileName: course.title
+    });
+  } catch (err) {
+    console.error('Get image URL error:', err);
+    res.status(500).json({ 
+      success: false,
+      message: 'Failed to get image URL.' 
     });
   }
 });
