@@ -68,6 +68,39 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    // ⭐ UPDATE STREAK ON LOGIN
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastActivity = user.lastActivityDate ? new Date(user.lastActivityDate) : null;
+    let lastActivityDate = lastActivity ? new Date(lastActivity) : null;
+    lastActivityDate?.setHours(0, 0, 0, 0);
+
+    let currentStreak = user.currentStreak || 0;
+    let maxStreak = user.maxStreak || 0;
+
+    // Only update streak if this is a new day
+    const daysDiff = lastActivityDate 
+      ? Math.floor((today.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24))
+      : -1;
+
+    if (daysDiff === -1 || daysDiff > 0) {
+      // New day detected
+      if (daysDiff === 1) {
+        // Yesterday's activity, continue the streak
+        currentStreak += 1;
+      } else if (daysDiff > 1 || daysDiff === -1) {
+        // Broken streak or first activity
+        currentStreak = 1;
+      }
+      maxStreak = Math.max(maxStreak, currentStreak);
+      
+      // Update user with new streak and last activity date
+      user.currentStreak = currentStreak;
+      user.maxStreak = maxStreak;
+      user.lastActivityDate = new Date();
+      await user.save();
+    }
+
     const token = jwt.sign(
       { id: user._id, email: user.email, role: user.role },
       process.env.JWT_SECRET,
@@ -92,6 +125,8 @@ router.post("/login", async (req, res) => {
         role: user.role,
         profileImage: user.profileImage,
         joinDate: user.createdAt,
+        currentStreak: user.currentStreak,
+        maxStreak: user.maxStreak,
       },
     });
   } catch (error) {

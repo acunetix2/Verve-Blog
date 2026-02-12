@@ -730,4 +730,52 @@ router.get("/courses/enrolled", authMiddleware, async (req, res) => {
   }
 });
 
+// ---------- GET STREAK INFO ----------
+router.get("/streak", authMiddleware, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const user = await User.findById(userId).select("currentStreak maxStreak lastActivityDate");
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found" 
+      });
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const lastActivity = user.lastActivityDate ? new Date(user.lastActivityDate) : null;
+    let lastActivityDate = lastActivity ? new Date(lastActivity) : null;
+    lastActivityDate?.setHours(0, 0, 0, 0);
+
+    const daysSinceLastActivity = lastActivityDate 
+      ? Math.floor((today.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24))
+      : -1;
+
+    res.json({
+      success: true,
+      streak: {
+        currentStreak: user.currentStreak || 0,
+        maxStreak: user.maxStreak || 0,
+        lastActivityDate: user.lastActivityDate || null,
+        isOnStreak: daysSinceLastActivity <= 1, // On streak if activity was today or yesterday
+        daysSinceLastActivity: daysSinceLastActivity >= 0 ? daysSinceLastActivity : null,
+        message: daysSinceLastActivity === 0 
+          ? "Keep it up! You've already completed an activity today." 
+          : daysSinceLastActivity === 1 
+          ? "Complete an activity today to keep your streak alive!" 
+          : "Start a new streak by completing an activity!"
+      }
+    });
+  } catch (error) {
+    console.error("Get streak error:", error);
+    res.status(500).json({ 
+      success: false,
+      message: "Failed to fetch streak info" 
+    });
+  }
+});
+
 export default router;

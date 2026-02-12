@@ -34,6 +34,8 @@ const ResourceSchema = new mongoose.Schema({
   url: { type: String }, // B2 URL
   fileSize: { type: Number }, // in bytes
   downloadCount: { type: Number, default: 0 },
+  categories: { type: [String], default: ["Uncategorized"] }, // Array of categories for flexibility
+  category: { type: String, default: "Uncategorized" }, // Legacy single category for backward compatibility
   createdAt: { type: Date, default: Date.now }
 }, { _id: false });
 

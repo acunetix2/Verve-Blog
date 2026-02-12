@@ -221,16 +221,19 @@ router.post('/:courseId/lesson/:lessonId/complete', authMiddleware, async (req, 
       return res.status(404).json({ success: false, message: 'Course not found.' });
     }
     
-    // Verify lesson exists in the course
-    let lessonExists = false;
+    // Find the lesson and get its video duration
+    let lessonFound = false;
+    let lessonVideoDuration = 0;
     for (const module of course.modules) {
-      if (module.lessons.some(l => l._id.toString() === lessonId || l.order === parseInt(lessonId))) {
-        lessonExists = true;
+      const lesson = module.lessons.find(l => l._id.toString() === lessonId || l.order === parseInt(lessonId));
+      if (lesson) {
+        lessonFound = true;
+        lessonVideoDuration = lesson.videoDuration || 0; // Duration in seconds
         break;
       }
     }
     
-    if (!lessonExists) {
+    if (!lessonFound) {
       return res.status(404).json({ success: false, message: 'Lesson not found in this course.' });
     }
 
@@ -246,13 +249,15 @@ router.post('/:courseId/lesson/:lessonId/complete', authMiddleware, async (req, 
       l => l.lessonId === lessonId || l.lessonId.toString() === lessonId.toString()
     );
     
+    let learningTimeAdded = 0;
     if (existingLessonIndex === -1) {
-      // Lesson not yet completed, add it
+      // Lesson not yet completed, add it and track learning time
       progress.completedLessons.push({ 
         lessonId, 
         completedAt: new Date(), 
         quizScore: quizScore || 0 
       });
+      learningTimeAdded = Math.ceil(lessonVideoDuration / 60); // Convert seconds to minutes
     } else {
       // Lesson already completed, update quiz score if higher
       if (quizScore && quizScore > (progress.completedLessons[existingLessonIndex].quizScore || 0)) {
@@ -262,6 +267,48 @@ router.post('/:courseId/lesson/:lessonId/complete', authMiddleware, async (req, 
     
     progress.lastAccessed = new Date();
     await progress.save();
+
+    // Update user's total learning time (only add if lesson newly completed)
+    if (learningTimeAdded > 0) {
+      // ⭐ UPDATE STREAK ON LESSON COMPLETION
+      const user = await User.findById(userId);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const lastActivity = user.lastActivityDate ? new Date(user.lastActivityDate) : null;
+      let lastActivityDate = lastActivity ? new Date(lastActivity) : null;
+      lastActivityDate?.setHours(0, 0, 0, 0);
+
+      let currentStreak = user.currentStreak || 0;
+      let maxStreak = user.maxStreak || 0;
+
+      // Only update streak if this is a new day
+      const daysDiff = lastActivityDate 
+        ? Math.floor((today.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24))
+        : -1;
+
+      let streakUpdated = false;
+      if (daysDiff === -1 || daysDiff > 0) {
+        // New day detected
+        if (daysDiff === 1) {
+          // Yesterday's activity, continue the streak
+          currentStreak += 1;
+        } else if (daysDiff > 1 || daysDiff === -1) {
+          // Broken streak or first activity
+          currentStreak = 1;
+        }
+        maxStreak = Math.max(maxStreak, currentStreak);
+        streakUpdated = true;
+      }
+
+      await User.findByIdAndUpdate(userId, {
+        $inc: { totalLearningMinutes: learningTimeAdded },
+        ...(streakUpdated && {
+          currentStreak,
+          maxStreak,
+          lastActivityDate: new Date()
+        })
+      });
+    }
 
     const totalLessons = course.modules.reduce((sum, m) => sum + m.lessons.length, 0);
     const isCourseComplete = progress.completedLessons.length === totalLessons;
@@ -774,7 +821,7 @@ router.post('/:courseId/lessons/:lessonId/upload-content', authMiddleware, admin
   }
 });
 
-// Track resource download
+// Track resource download and generate signed URL
 router.post('/:courseId/lessons/:lessonId/resources/:resourceIndex/download', authMiddleware, async (req, res) => {
   try {
     const { courseId, lessonId, resourceIndex } = req.params;
@@ -785,31 +832,56 @@ router.post('/:courseId/lessons/:lessonId/resources/:resourceIndex/download', au
     }
 
     // Find the lesson
-    let found = false;
+    let resource = null;
     for (const module of course.modules) {
       const lesson = module.lessons.find(l => l._id.toString() === lessonId);
       if (lesson && lesson.resources && lesson.resources[resourceIndex]) {
+        resource = lesson.resources[resourceIndex];
         // Increment download count
         if (!lesson.resources[resourceIndex].downloadCount) {
           lesson.resources[resourceIndex].downloadCount = 0;
         }
         lesson.resources[resourceIndex].downloadCount += 1;
-        found = true;
         break;
       }
     }
 
-    if (!found) {
+    if (!resource) {
       return res.status(404).json({ error: 'Resource not found' });
+    }
+
+    // Extract B2 file key from URL if it exists, otherwise use full URL
+    let signedUrl = resource.url;
+    
+    // If it's a B2 URL, generate a fresh signed URL
+    if (resource.url && resource.url.includes('backblazeb2.com')) {
+      try {
+        // Extract the file key from the B2 URL
+        const urlObj = new URL(resource.url);
+        const fileKey = urlObj.pathname.replace(/^\//, '').replace(/^[^\/]+\//, ''); // Remove bucket name
+        
+        const command = new GetObjectCommand({
+          Bucket: process.env.B2_BUCKET_NAME,
+          Key: fileKey,
+        });
+        
+        signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour validity
+      } catch (signError) {
+        console.warn('Failed to generate signed URL, using original URL:', signError);
+        // Fall back to original URL if signing fails
+        signedUrl = resource.url;
+      }
     }
 
     await course.save();
     res.json({ 
       success: true,
-      message: 'Download tracked' 
+      message: 'Download initialized',
+      downloadUrl: signedUrl,
+      fileName: resource.title
     });
   } catch (error) {
-    console.error('Download tracking error:', error);
+    console.error('Download error:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -854,11 +926,12 @@ router.post('/:courseId/lessons/:lessonId/quiz/submit', authMiddleware, async (r
       });
     }
 
-    // Calculate score
+    // Calculate score - trim answers for better matching
     let correctCount = 0;
     const detailedResults = lesson.quiz.map((question, idx) => {
-      const userAnswer = answers[idx];
-      const isCorrect = userAnswer === question.correctAnswer;
+      const userAnswer = answers[idx] ? answers[idx].trim() : '';
+      const correctAnswer = question.correctAnswer ? question.correctAnswer.trim() : '';
+      const isCorrect = userAnswer === correctAnswer;
       if (isCorrect) correctCount++;
       return {
         question: question.question,
@@ -950,8 +1023,9 @@ router.post('/:courseId/exam/submit', authMiddleware, async (req, res) => {
     // Calculate score
     let correctCount = 0;
     const detailedResults = exam.questions.map((question, idx) => {
-      const userAnswer = answers[idx];
-      const isCorrect = userAnswer === question.correctAnswer;
+      const userAnswer = answers[idx] ? answers[idx].trim() : '';
+      const correctAnswer = question.correctAnswer ? question.correctAnswer.trim() : '';
+      const isCorrect = userAnswer === correctAnswer;
       if (isCorrect) correctCount++;
       return {
         question: question.question,
