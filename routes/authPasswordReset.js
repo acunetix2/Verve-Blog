@@ -7,26 +7,13 @@ import express from "express";
 import crypto from "crypto";
 import User from "../models/User.js";
 import PasswordResetToken from "../models/PasswordResetToken.js";
-import { passwordResetEmail } from "../utils/emailTemplates.js";
-import sgMail from "@sendgrid/mail";
+import { passwordResetEmail, passwordResetText } from "../utils/emailTemplates.js";
+import { sendEmail } from "../utils/sendEmail.js";
 import logger from "../config/logger.js";
 
 const router = express.Router();
 
-// Validate and set SendGrid API key
-if (!process.env.SENDGRID_API_KEY) {
-  console.error("❌ SENDGRID_API_KEY is not set in environment variables!");
-  console.error("   Password reset emails will not be sent until configured.");
-} else if (!process.env.SENDGRID_API_KEY.startsWith("SG.")) {
-  console.error("❌ SENDGRID_API_KEY must start with 'SG.' - current value appears invalid");
-  console.error("   Password reset emails will not be sent until corrected.");
-} else {
-  sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-  console.log("✓ SendGrid API configured for password reset emails");
-}
-
-// Fallback sender email
-const MAIL_FROM = process.env.MAIL_FROM || "vervehubwriteups@gmail.com";
+console.log("✓ Resend API configured for password reset emails");
 
 /* ---------------------------------------------------
    FORGOT PASSWORD
@@ -53,24 +40,19 @@ router.post("/forgot-password", async (req, res) => {
 
     const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${rawToken}&email=${email}`;
 
-    // Send email using SendGrid
-    const msg = {
-      to: email,
-      from: {
-        email: MAIL_FROM,
-        name: "Verve Hub",
-      },
-      subject: "Verve Hub Password Reset",
-      html: passwordResetEmail(resetUrl),
-      replyTo: MAIL_FROM,
-    };
-
+    // Send email using Resend API
     try {
-      await sgMail.send(msg);
+      await sendEmail({
+        to: email,
+        subject: "Verve Hub Password Reset",
+        html: passwordResetEmail(resetUrl),
+        text: passwordResetText(resetUrl),
+        replyTo: process.env.MAIL_FROM || "noreply@vervehub.com"
+      });
       console.log(`Password reset email sent to ${email}`);
       res.json({ message: "Password reset link sent to email" });
     } catch (emailError) {
-      console.error("SendGrid email error:", emailError.message);
+      console.error("Resend email error:", emailError.message);
       // Still return success to user for security (don't reveal if email exists)
       // But log the error for debugging
       logger.error("Failed to send password reset email", { 

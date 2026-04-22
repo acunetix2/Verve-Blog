@@ -1,156 +1,229 @@
 /**
+ * Email Templates with Modern Styling
+ * ====================================
+ * Professional email templates using Resend API
+ * Inspired by TryHackMe modern design patterns
  * Author / Copyright: Iddy
- * All rights reserved.
  */
+
+// Color scheme (matching TryHackMe-inspired dark theme)
+const BRAND_PRIMARY = "#0052cc";
+const BRAND_SECONDARY = "#7c3aed";
+const TEXT_DARK = "#1f2937";
+const TEXT_LIGHT = "#6b7280";
+const BG_LIGHT = "#f9fafb";
+const ACCENT_ORANGE = "#f97316";
+const ACCENT_GREEN = "#10b981";
+
+const baseStyle = `
+font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', sans-serif;
+line-height: 1.6;
+color: ${TEXT_DARK};
+`;
+
 export const passwordResetEmail = (resetUrl) => `
-  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: auto;">
-    
-    <div style="text-align: center; margin-bottom: 30px;">
-      <img src="https://vervehub.com/logo.png" alt="Verve Hub Academy" style="max-width: 200px; height: auto;" />
-    </div>
-    
-    <h2 style="color: #f97316;">Verve Hub Password Reset</h2>
-    
-    <p>Hello,</p>
-    
-    <p>You recently requested to reset your Verve Hub account password. Click the button below to reset it:</p>
-    
-    <p style="text-align:center;">
-      <a href="${resetUrl}" 
-         style="color: #fff; background-color: #f97316; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">
-        Reset Password
-      </a>
-    </p>
-
-    <p>If the button above does not work, copy and paste this URL into your browser:</p>
-    <p><a href="${resetUrl}">${resetUrl}</a></p>
-    
-    <p style="color: #888;">This link will expire in 1 hour. If you did not request this, simply ignore this email.</p>
-    
-    <p style="margin-top: 20px;">Best regards,<br/>Verve Hub WriteUps Team</p>
-
-    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-
-    <p style="font-size: 12px; color: #666;">
-      Verve Hub WriteUps | 123 Main Street | Nairobi, Kenya
-    </p>
-
-    <p style="font-size: 12px; color: #999;">
-      Security notice: If you did not request this password reset, secure your account immediately by changing your password and enabling two-factor authentication.
-    </p>
-  </div>
-`;
-
-// Plain-text fallback for better deliverability
-export const passwordResetText = (resetUrl) => `
-Verve Hub Password Reset
-
-You recently requested to reset your Verve Hub account password.
-
-Reset your password using this link: ${resetUrl}
-
-This link will expire in 1 hour. If you did not request this, ignore this email.
-
-Best regards,
-Verve Hub WriteUps Team
-
-Verve Hub WriteUps | 123 Main Street | Nairobi, Kenya
-
-Security notice: If you did not request this password reset, secure your account immediately by changing your password and enabling two-factor authentication.
-`;
-
-// Course Completion Email
-export const courseCompletionEmail = (userName, courseName, certificateNumber, certificateUrl) => `
-  <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.8; color: #333; max-width: 600px; margin: auto; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 0; border-radius: 8px; overflow: hidden;">
-    
-    <!-- Header -->
-    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
-      <img src="https://vervehub.com/logo.png" alt="Verve Hub Academy" style="max-width: 180px; height: auto; margin-bottom: 15px;" />
-      <h1 style="color: #fff; margin: 0 0 5px 0; font-size: 28px; font-weight: 700;">Verve Academy</h1>
-      <h2 style="color: #fff; margin: 0; font-size: 24px; font-weight: 700;">🎉 Congratulations!</h2>
-      <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">You've Successfully Completed a Course</p>
+  <div style="${baseStyle} max-width: 600px; margin: 0 auto; background: #ffffff;">
+    <!-- Header with gradient -->
+    <div style="background: linear-gradient(135deg, ${BRAND_PRIMARY} 0%, ${BRAND_SECONDARY} 100%); padding: 40px 20px; text-align: center; border-radius: 12px 12px 0 0;">
+      <h1 style="color: #fff; margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">🔐 Password Reset</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 8px 0 0 0; font-size: 14px;">Secure your Verve Hub account</p>
     </div>
 
-    <!-- Body -->
-    <div style="padding: 40px 30px; background: #fff;">
-      <p style="font-size: 16px; margin-top: 0;">Dear <strong>${userName}</strong>,</p>
-      
-      <p style="font-size: 15px; color: #555;">We're thrilled to inform you that you have successfully completed the course:</p>
-      
-      <div style="background: linear-gradient(135deg, rgba(102,126,234,0.1) 0%, rgba(118,75,162,0.1) 100%); border-left: 4px solid #667eea; padding: 20px; margin: 25px 0; border-radius: 4px;">
-        <h3 style="margin: 0 0 10px 0; color: #667eea; font-size: 18px;">${courseName}</h3>
-        <p style="margin: 8px 0; color: #666; font-size: 14px;">
-          <strong>Certificate Number:</strong> <span style="font-family: monospace; color: #764ba2;">${certificateNumber}</span>
-        </p>
-      </div>
+    <!-- Main content -->
+    <div style="padding: 40px 30px;">
+      <p style="margin: 0 0 20px 0; font-size: 16px; color: ${TEXT_DARK};">Hi there,</p>
 
-      <p style="font-size: 15px; color: #555; margin-top: 25px;">Your certificate of completion has been generated and is ready for download. You can view and download your certificate using the button below:</p>
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${TEXT_LIGHT};">
+        We received a request to reset your password. Click the button below to create a new password. This link expires in <strong>1 hour</strong>.
+      </p>
 
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${certificateUrl}" 
-           style="color: #fff; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 14px 32px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600; font-size: 15px; box-shadow: 0 4px 15px rgba(102,126,234,0.4);">
-          📜 View My Certificate
+      <!-- CTA Button -->
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${resetUrl}" 
+           style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, ${ACCENT_ORANGE} 0%, ${ACCENT_GREEN} 100%); color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3); transition: transform 0.2s;">
+          Reset Password
         </a>
       </div>
 
-      <div style="background: #f8f9fa; padding: 20px; border-radius: 6px; margin: 25px 0;">
-        <h4 style="color: #667eea; margin-top: 0; font-size: 15px;">What's Next?</h4>
-        <ul style="color: #555; font-size: 14px; padding-left: 20px; margin: 10px 0;">
-          <li>Share your achievement with your network</li>
-          <li>Explore more courses to expand your knowledge</li>
-          <li>Download your certificate for your records</li>
-        </ul>
+      <!-- Security info box -->
+      <div style="background: ${BG_LIGHT}; border-left: 4px solid ${ACCENT_ORANGE}; padding: 16px 20px; border-radius: 6px; margin: 24px 0;">
+        <p style="margin: 0; font-size: 13px; color: ${TEXT_DARK};">
+          <strong>🔒 Security Tip:</strong> Never share this link with anyone. We'll never ask for your password via email.
+        </p>
       </div>
 
-      <p style="font-size: 15px; color: #555; margin-top: 25px;">Thank you for choosing Verve Academy for your cybersecurity learning journey. Keep up the excellent work!</p>
-
-      <div style="margin-top: 35px; padding-top: 20px; border-top: 2px solid #eee;">
-        <p style="margin: 5px 0; font-size: 14px; color: #333;">Best regards,</p>
-        <p style="margin: 15px 0 0 0; font-size: 15px; font-weight: 600; color: #333;">Iddy Chesire</p>
-        <p style="margin: 3px 0; font-size: 13px; color: #667eea; font-weight: 600;">CEO, Verve Hub Inc.</p>
-      </div>
+      <!-- Fallback link -->
+      <p style="margin: 24px 0 0 0; font-size: 13px; color: ${TEXT_LIGHT}; text-align: center;">
+        Or copy this link:<br>
+        <span style="word-break: break-all; color: ${BRAND_PRIMARY};">${resetUrl}</span>
+      </p>
     </div>
 
     <!-- Footer -->
-    <div style="background: #f5f5f5; padding: 20px 30px; text-align: center; border-top: 1px solid #eee;">
-      <p style="margin: 0; font-size: 12px; color: #999;">
-        Verve Academy | Cybersecurity Learning Platform
+    <div style="background: ${BG_LIGHT}; padding: 24px 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0; font-size: 13px; color: ${TEXT_LIGHT};">
+        Questions? Contact our support team at <strong>support@vervehub.com</strong>
       </p>
-      <p style="margin: 5px 0 0 0; font-size: 12px; color: #ccc;">
-        This is an automated message, please do not reply to this email.
+      <p style="margin: 12px 0 0 0; font-size: 12px; color: #9ca3af;">
+        © 2024 Verve Hub Academy. All rights reserved.
       </p>
     </div>
   </div>
 `;
 
-// Plain-text version of course completion email
+// Plain-text fallback
+export const passwordResetText = (resetUrl) => `
+🔐 PASSWORD RESET - Verve Hub Academy
+=====================================
+
+Hi there,
+
+We received a request to reset your password. Use the link below to create a new password. This link expires in 1 hour.
+
+${resetUrl}
+
+🔒 SECURITY TIP:
+Never share this link with anyone. We'll never ask for your password via email.
+
+Questions? Contact support@vervehub.com
+
+© 2024 Verve Hub Academy
+`;
+
+/**
+ * Course Completion Email - Modern design
+ */
+export const courseCompletionEmail = (userName, courseName, certificateNumber, certificateUrl) => `
+  <div style="${baseStyle} max-width: 600px; margin: 0 auto; background: #ffffff;">
+    <!-- Celebratory Header -->
+    <div style="background: linear-gradient(135deg, ${ACCENT_GREEN} 0%, #0ea5e9 100%); padding: 50px 20px; text-align: center; border-radius: 12px 12px 0 0;">
+      <div style="font-size: 48px; margin-bottom: 16px;">🎉</div>
+      <h1 style="color: #fff; margin: 0; font-size: 28px; font-weight: 700;">Course Completed!</h1>
+      <p style="color: rgba(255,255,255,0.95); margin: 12px 0 0 0; font-size: 16px;">You've earned your certificate</p>
+    </div>
+
+    <!-- Main content -->
+    <div style="padding: 40px 30px;">
+      <p style="margin: 0 0 8px 0; font-size: 16px; color: ${TEXT_DARK};">
+        Congratulations, <strong>${userName}</strong>! 🏆
+      </p>
+
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${TEXT_LIGHT};">
+        You've successfully completed the <strong>${courseName}</strong> course. Your dedication and hard work have paid off!
+      </p>
+
+      <!-- Certificate Box -->
+      <div style="background: linear-gradient(135deg, rgba(102,126,234,0.05) 0%, rgba(118,75,162,0.05) 100%); border: 2px solid ${BRAND_PRIMARY}; border-radius: 8px; padding: 24px; margin: 28px 0; text-align: center;">
+        <p style="margin: 0 0 8px 0; font-size: 13px; color: ${TEXT_LIGHT}; text-transform: uppercase; letter-spacing: 1px;">Certificate of Completion</p>
+        <p style="margin: 0; font-size: 20px; font-weight: 700; color: ${BRAND_PRIMARY}; font-family: monospace;">
+          ${certificateNumber}
+        </p>
+      </div>
+
+      <!-- CTA Button -->
+      <div style="text-align: center; margin: 32px 0;">
+        <a href="${certificateUrl}" 
+           style="display: inline-block; padding: 14px 36px; background: ${ACCENT_GREEN}; color: #fff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+          📥 Download Certificate
+        </a>
+      </div>
+
+      <!-- Next Steps -->
+      <div style="background: ${BG_LIGHT}; border-radius: 8px; padding: 24px; margin: 28px 0;">
+        <h3 style="margin: 0 0 16px 0; color: ${TEXT_DARK}; font-size: 15px; font-weight: 600;">What's Next?</h3>
+        <ul style="margin: 0; padding: 0; list-style: none; font-size: 14px;">
+          <li style="margin: 0 0 8px 0; color: ${TEXT_LIGHT};">✓ Share your achievement on LinkedIn and social media</li>
+          <li style="margin: 0 0 8px 0; color: ${TEXT_LIGHT};">✓ Explore advanced courses in our catalogue</li>
+          <li style="margin: 0; color: ${TEXT_LIGHT};">✓ Join our community forums for peer learning</li>
+        </ul>
+      </div>
+
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${TEXT_LIGHT};">
+        Thank you for choosing Verve Academy. Keep pushing your boundaries! 🚀
+      </p>
+    </div>
+
+    <!-- Footer -->
+    <div style="background: ${BG_LIGHT}; padding: 24px 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+      <p style="margin: 0; font-size: 13px; color: ${TEXT_LIGHT};">
+        <strong>Iddy Chesire</strong> | CEO, Verve Hub Inc.
+      </p>
+      <p style="margin: 12px 0 0 0; font-size: 12px; color: #9ca3af;">
+        © 2024 Verve Hub Academy | Cybersecurity Learning Platform
+      </p>
+    </div>
+  </div>
+`;
+
+/**
+ * Course Completion Email - Plain text
+ */
 export const courseCompletionText = (userName, courseName, certificateNumber, certificateUrl) => `
-Verve Academy
-Congratulations! You've Successfully Completed a Course
+🎉 COURSE COMPLETED - Verve Hub Academy
+====================================
 
-Dear ${userName},
+Congratulations, ${userName}! 🏆
 
-We're thrilled to inform you that you have successfully completed the course: ${courseName}
+You've successfully completed the ${courseName} course. Your dedication and hard work have paid off!
 
+CERTIFICATE OF COMPLETION
+---
 Certificate Number: ${certificateNumber}
+---
 
-Your certificate of completion has been generated and is ready for download.
+📥 Download Your Certificate:
+${certificateUrl}
 
-View your certificate here: ${certificateUrl}
+WHAT'S NEXT?
+✓ Share your achievement on LinkedIn and social media
+✓ Explore advanced courses in our catalogue
+✓ Join our community forums for peer learning
 
-What's Next?
-- Share your achievement with your network
-- Explore more courses to expand your knowledge
-- Download your certificate for your records
-
-Thank you for choosing Verve Academy for your cybersecurity learning journey. Keep up the excellent work!
+Thank you for choosing Verve Academy. Keep pushing your boundaries! 🚀
 
 Best regards,
 
 Iddy Chesire
 CEO, Verve Hub Inc.
 
----
-Verve Academy | Cybersecurity Learning Platform
-This is an automated message, please do not reply to this email.
+© 2024 Verve Hub Academy | Cybersecurity Learning Platform
 `;
+
+/**
+ * Welcome Email - New user
+ */
+export const welcomeEmail = (userName) => `
+  <div style="${baseStyle} max-width: 600px; margin: 0 auto; background: #ffffff;">
+    <div style="background: linear-gradient(135deg, ${BRAND_PRIMARY} 0%, ${BRAND_SECONDARY} 100%); padding: 40px 20px; text-align: center; border-radius: 12px 12px 0 0;">
+      <h1 style="color: #fff; margin: 0; font-size: 28px; font-weight: 700;">Welcome to Verve Academy! 👋</h1>
+      <p style="color: rgba(255,255,255,0.9); margin: 12px 0 0 0; font-size: 15px;">Your cybersecurity learning journey starts now</p>
+    </div>
+
+    <div style="padding: 40px 30px;">
+      <p style="margin: 0 0 20px 0; font-size: 16px;">Hi ${userName},</p>
+      <p style="margin: 0 0 24px 0; font-size: 15px; color: ${TEXT_LIGHT};">
+        Welcome aboard! We're excited to have you join our cybersecurity community. Whether you're just starting or looking to level up your skills, you're in the right place.
+      </p>
+
+      <div style="background: ${BG_LIGHT}; border-radius: 8px; padding: 24px; margin: 28px 0;">
+        <h3 style="margin: 0 0 16px 0; color: ${TEXT_DARK}; font-size: 15px; font-weight: 600;">Get Started Quickly</h3>
+        <ul style="margin: 0; padding: 0; list-style: none; font-size: 14px;">
+          <li style="margin: 0 0 10px 0; color: ${TEXT_LIGHT};">1. Complete your profile to showcase your skills</li>
+          <li style="margin: 0 0 10px 0; color: ${TEXT_LIGHT};">2. Browse our course catalogue</li>
+          <li style="margin: 0; color: ${TEXT_LIGHT};">3. Start learning and earning certificates</li>
+        </ul>
+      </div>
+
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${TEXT_LIGHT};">
+        Questions? Check out our FAQ or reach out to <strong>support@vervehub.com</strong>
+      </p>
+    </div>
+
+    <div style="background: ${BG_LIGHT}; padding: 24px 30px; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb; text-align: center;">
+      <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+        © 2024 Verve Hub Academy. Start your learning journey today!
+      </p>
+    </div>
+  </div>
+`;
+

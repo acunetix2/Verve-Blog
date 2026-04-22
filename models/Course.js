@@ -68,15 +68,71 @@ const ModuleSchema = new mongoose.Schema({
   order: { type: Number, default: 0 }
 });
 
+// Task schema for THM-style rooms
+const TaskSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: String,
+  content: { type: String }, // HTML/Markdown content
+  contentBlocks: [ContentBlockSchema], // Structured content blocks
+  questions: [
+    {
+      question: { type: String, required: true },
+      hint: String,
+      points: { type: Number, default: 8 },
+      answer: { type: String, required: true }, // Correct answer
+      order: { type: Number, default: 0 }
+    }
+  ],
+  order: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: true });
+
+// Section schema for THM-style rooms
+const SectionSchema = new mongoose.Schema({
+  title: { type: String, required: true },
+  description: String,
+  tasks: [TaskSchema],
+  order: { type: Number, default: 0 },
+  createdAt: { type: Date, default: Date.now }
+}, { _id: true });
+
 const CourseSchema = new mongoose.Schema({
   title: { type: String, required: true },
   slug: { type: String, index: true, unique: false },
   description: String,
   imageUrl: { type: String }, // B2 URL for course image
   imageB2FileId: { type: String }, // B2 file identifier
-  modules: [ModuleSchema],
+  modules: [ModuleSchema], // Legacy support
+  sections: [SectionSchema], // New THM-style sections
   finalExam: FinalExamSchema, // Final exam for the course
   status: { type: String, enum: ['draft', 'published'], default: 'draft' }, // Course status
+  
+  // TryHackMe Room features
+  isRoom: { type: Boolean, default: true }, // Mark as "Room" instead of Course
+  difficulty: { type: String, enum: ['Beginner', 'Intermediate', 'Advanced', 'Expert'], default: 'Beginner' },
+  category: { type: String, default: 'General' },
+  roomType: { type: String, enum: ['challenge', 'learning', 'ctf'], default: 'learning' },
+  
+  // Rewards system
+  rewards: {
+    badge: { name: String, icon: String, color: String },
+    certificate: { type: Boolean, default: false },
+    certificateTemplate: String, // Path to certificate template
+    pointsPerQuestion: { type: Number, default: 8 },
+    totalPoints: { type: Number, default: 0 }
+  },
+  
+  // Questions and answers (legacy)
+  questions: [
+    {
+      index: Number,
+      question: String,
+      hint: String,
+      points: { type: Number, default: 8 },
+      fileLocation: String,
+      answer: String // Stored securely
+    }
+  ],
   
   // Pricing and Access Tiers
   tier: { type: String, enum: ['free', 'premium', 'enterprise'], default: 'free' },
@@ -94,6 +150,22 @@ const CourseSchema = new mongoose.Schema({
     enum: ['public', 'premium', 'subscription'], 
     default: 'public' 
   }, // 'public' = free, 'premium' = paid one-time, 'subscription' = recurring
+  
+  // Content upload support
+  uploadedContent: {
+    markdownFile: String, // Base64 or file path
+    uploadedAt: Date,
+    uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  },
+  
+  // Room statistics
+  roomStats: {
+    usersEnrolled: { type: Number, default: 0 },
+    usersCompleted: { type: Number, default: 0 },
+    averageRating: { type: Number, default: 0 },
+    difficulty: String,
+    timeEstimate: Number // in minutes
+  },
   
   // Team Licensing
   teamLicense: {

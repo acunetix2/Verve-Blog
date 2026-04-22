@@ -494,13 +494,13 @@ router.post('/:courseId/certificate/download', authMiddleware, async (req, res) 
 // Admin: Create a new course
 router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async (req, res) => {
   try {
-    const { title, description, modules, finalExam, status = 'draft' } = req.body;
+    const { title, description, modules, sections, finalExam, status = 'draft', isRoom, difficulty, roomType, category, rewards, questions } = req.body;
     
     // Validate required fields
     if (!title) {
       return res.status(400).json({ 
         success: false,
-        message: 'Course title is required.' 
+        message: 'Course/Room title is required.' 
       });
     }
     
@@ -516,7 +516,7 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
       } catch (uploadErr) {
         return res.status(400).json({ 
           success: false,
-          message: 'Failed to upload course image. Please try again.' 
+          message: 'Failed to upload image. Please try again.' 
         });
       }
     }
@@ -535,6 +535,20 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
       }
     }
 
+    // Accept sections for THM-style rooms
+    let parsedSections = [];
+    if (sections) {
+      if (typeof sections === 'string') {
+        try {
+          parsedSections = JSON.parse(sections);
+        } catch (e) {
+          return res.status(400).json({ success: false, message: 'Invalid sections JSON.' });
+        }
+      } else if (Array.isArray(sections) || typeof sections === 'object') {
+        parsedSections = sections;
+      }
+    }
+
     // Parse finalExam if it's a string
     let parsedFinalExam = null;
     if (finalExam) {
@@ -549,28 +563,71 @@ router.post('/', authMiddleware, adminMiddleware, upload.single('image'), async 
       }
     }
 
-    const course = new Course({
+    // Parse rewards if it's a string
+    let parsedRewards = null;
+    if (rewards) {
+      if (typeof rewards === 'string') {
+        try {
+          parsedRewards = JSON.parse(rewards);
+        } catch (e) {
+          // If parsing fails, keep as is
+          parsedRewards = rewards;
+        }
+      } else {
+        parsedRewards = rewards;
+      }
+    }
+
+    // Parse questions if it's a string
+    let parsedQuestions = [];
+    if (questions) {
+      if (typeof questions === 'string') {
+        try {
+          parsedQuestions = JSON.parse(questions);
+        } catch (e) {
+          // Keep as array
+          parsedQuestions = [];
+        }
+      } else if (Array.isArray(questions)) {
+        parsedQuestions = questions;
+      }
+    }
+
+    const courseData = {
       title,
       description,
       imageUrl,
       imageB2FileId,
       modules: parsedModules,
+      sections: parsedSections,
       finalExam: parsedFinalExam,
       status,
       createdBy: req.user.id,
-    });
+    };
+
+    // Add room-specific fields if isRoom is true
+    if (isRoom) {
+      courseData.isRoom = true;
+      courseData.difficulty = difficulty || 'Beginner';
+      courseData.roomType = roomType || 'learning';
+      courseData.category = category || 'General';
+      courseData.rewards = parsedRewards;
+      courseData.questions = parsedQuestions;
+    }
+
+    const course = new Course(courseData);
 
     await course.save();
     res.status(201).json({ 
       success: true,
-      message: 'Course created successfully!',
+      message: 'Room/Course created successfully!',
       course 
     });
   } catch (err) {
     console.error('Create course error:', err);
     res.status(400).json({ 
       success: false,
-      message: 'Failed to create course. Please check your input and try again.' 
+      message: 'Failed to create room/course. Please check your input and try again.' 
     });
   }
 });
@@ -1141,6 +1198,179 @@ router.get('/:courseId/exam/attempts', authMiddleware, async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Failed to fetch exam attempts' 
+    });
+  }
+});
+
+// ============================================================
+// ROOM QUESTION ENDPOINTS (TryHackMe-style)
+// ============================================================
+
+// Submit answer to a room question
+router.post('/:courseId/question/submit', authMiddleware, async (req, res) => {
+  try {
+    const { courseId: courseParam } = req.params;
+    const { questionId, answer } = req.body;
+    const userId = req.user.id;
+
+    // Validate input
+    if (!questionId || !answer) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Question ID and answer required' 
+      });
+    }
+
+    // Get room
+    const room = await resolveCourse(courseParam);
+    if (!room) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Room not found' 
+      });
+    }
+
+    // Find question
+    const question = room.questions.id(questionId);
+    if (!question) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Question not found' 
+      });
+    }
+
+    // Check if answer is correct (case-insensitive, trimmed)
+    const isCorrect = question.answer.toLowerCase().trim() === answer.toLowerCase().trim();
+
+    // Get points for this question
+    const points = isCorrect ? (question.points || room.rewards?.pointsPerQuestion || 8) : 0;
+
+    // Update user points if correct
+    if (isCorrect) {
+      const user = await User.findById(userId);
+      if (user) {
+        user.totalPoints = (user.totalPoints || 0) + points;
+        user.pointsThisMonth = (user.pointsThisMonth || 0) + points;
+        
+        // Add to points history
+        if (!user.pointsHistory) user.pointsHistory = [];
+        user.pointsHistory.push({
+          roomId: room._id,
+          questionId: questionId,
+          points: points,
+          earnedAt: new Date()
+        });
+
+        // Track enrolled rooms
+        if (!user.enrolledRooms) user.enrolledRooms = [];
+        const enrolledRoom = user.enrolledRooms.find(r => r.roomId.equals(room._id));
+        if (!enrolledRoom) {
+          user.enrolledRooms.push({
+            roomId: room._id,
+            enrolledAt: new Date(),
+            completedAt: null,
+            pointsEarned: points,
+            answeredQuestions: [questionId]
+          });
+        } else {
+          enrolledRoom.pointsEarned = (enrolledRoom.pointsEarned || 0) + points;
+          if (!enrolledRoom.answeredQuestions) enrolledRoom.answeredQuestions = [];
+          if (!enrolledRoom.answeredQuestions.includes(questionId)) {
+            enrolledRoom.answeredQuestions.push(questionId);
+          }
+        }
+
+        await user.save();
+      }
+
+      // Update user progress
+      let progress = await UserProgress.findOne({ userId, courseId: room._id });
+      if (!progress) {
+        progress = new UserProgress({
+          userId,
+          courseId: room._id,
+          enrollment: {
+            enrolledAt: new Date(),
+            status: 'in-progress'
+          }
+        });
+      }
+      
+      if (!progress.answeredQuestions) progress.answeredQuestions = [];
+      if (!progress.answeredQuestions.find(q => q.questionId === questionId)) {
+        progress.answeredQuestions.push({
+          questionId,
+          isCorrect,
+          points,
+          answeredAt: new Date()
+        });
+      }
+
+      progress.pointsEarned = (progress.pointsEarned || 0) + points;
+      await progress.save();
+    }
+
+    res.json({
+      success: true,
+      isCorrect,
+      points,
+      message: isCorrect ? `Correct! You earned ${points} points.` : 'Incorrect. Try again!',
+      hint: question.hint || 'Check the lesson content for clues.'
+    });
+  } catch (error) {
+    console.error('Question submit error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to submit answer' 
+    });
+  }
+});
+
+// Get user's progress in a room
+router.get('/:courseId/progress', authMiddleware, async (req, res) => {
+  try {
+    const { courseId: courseParam } = req.params;
+    const userId = req.user.id;
+
+    const room = await resolveCourse(courseParam);
+    if (!room) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Room not found' 
+      });
+    }
+
+    const progress = await UserProgress.findOne({ userId, courseId: room._id });
+    const user = await User.findById(userId);
+
+    const answeredCount = progress?.answeredQuestions?.length || 0;
+    const totalQuestions = room.questions?.length || 0;
+    const pointsEarned = progress?.pointsEarned || 0;
+    const maxPoints = room.rewards?.totalPoints || (totalQuestions * 8);
+    const progressPercent = totalQuestions > 0 ? Math.round((answeredCount / totalQuestions) * 100) : 0;
+
+    const enrolledRoom = user?.enrolledRooms?.find(r => r.roomId.equals(room._id));
+
+    res.json({
+      success: true,
+      roomId: room._id,
+      title: room.title,
+      answeredQuestions: answeredCount,
+      totalQuestions,
+      pointsEarned,
+      maxPoints,
+      progressPercent,
+      isCompleted: answeredCount === totalQuestions,
+      difficulty: room.difficulty,
+      roomType: room.roomType,
+      enrolledAt: enrolledRoom?.enrolledAt || progress?.enrollment?.enrolledAt,
+      completedAt: enrolledRoom?.completedAt || progress?.enrollment?.completedAt
+    });
+  } catch (error) {
+    console.error('Get progress error:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch progress' 
     });
   }
 });

@@ -18,7 +18,7 @@
     "@aws-sdk/s3-request-presigner": "^3.929.0",
     "@paypal/checkout-server-sdk": "^1.0.3",
     "@paypal/paypal-server-sdk": "^2.0.0",
-    "@sendgrid/mail": "^8.1.6",
+    "resend": "^3.2.0",
     "backblaze-b2": "^1.7.1",
     "bcryptjs": "^3.0.2",
     "cloudinary": "^2.8.0",

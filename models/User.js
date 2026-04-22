@@ -203,6 +203,18 @@ const userSchema = new mongoose.Schema(
     maxStreak: { type: Number, default: 0 },
     lastActivityDate: { type: Date, default: null },
 
+    // THM Capability Scores (by category)
+    capabilityScores: {
+      web: { type: Number, default: 0 },
+      network: { type: Number, default: 0 },
+      linux: { type: Number, default: 0 },
+      windows: { type: Number, default: 0 },
+      offensive: { type: Number, default: 0 },
+      defensive: { type: Number, default: 0 },
+      cryptography: { type: Number, default: 0 },
+      forensics: { type: Number, default: 0 },
+    },
+
     // Two-factor authentication
     twoFactorEnabled: { type: Boolean, default: false },
     lastLogin: { type: Date, default: null },
@@ -210,6 +222,41 @@ const userSchema = new mongoose.Schema(
     // Bookmarked posts
     bookmarkedPosts: [
       { type: mongoose.Schema.Types.ObjectId, ref: 'Post' }
+    ],
+
+    // TryHackMe-style points system
+    totalPoints: { type: Number, default: 0 },
+    pointsThisMonth: { type: Number, default: 0 },
+    level: { type: Number, default: 1 },
+    rank: { type: String, default: 'Beginner' },
+    roomsCompleted: { type: Number, default: 0 },
+    pointsHistory: [
+      {
+        roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+        points: Number,
+        questionIndex: Number,
+        earnedAt: { type: Date, default: Date.now }
+      }
+    ],
+
+    // Rooms progress
+    enrolledRooms: [
+      {
+        roomId: { type: mongoose.Schema.Types.ObjectId, ref: 'Course' },
+        enrolledAt: { type: Date, default: Date.now },
+        started: { type: Boolean, default: false },
+        completed: { type: Boolean, default: false },
+        completionDate: Date,
+        progress: { type: Number, default: 0 },
+        answers: [
+          {
+            questionIndex: Number,
+            answer: String,
+            isCorrect: Boolean,
+            pointsEarned: { type: Number, default: 0 }
+          }
+        ]
+      }
     ],
   },
   {
